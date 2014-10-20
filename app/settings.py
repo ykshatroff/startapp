@@ -86,9 +86,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'yz.catalog.middleware.CatalogMiddleware',
-    'yz.core.middleware.UploadFileNameMiddleware',
-    'yz.core.middleware.AjaxDebugMiddleware',
 )
 
 ROOT_URLCONF = '%s.urls' % PROJECT_NAME
