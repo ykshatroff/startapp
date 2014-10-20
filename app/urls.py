@@ -6,6 +6,6 @@ from django.conf.urls import patterns, include, url
 urlpatterns = patterns('',
     #url(r'^admin/', include(admin.site.urls)),
     #
-    url(r'^$',
-        'theapp.views.get_data_view', name="get_data"),
+    url(r'^$', 'theapp.views.index_view', name="index"),
+    url(r'^get_data/$', 'theapp.views.get_data_view', name="get_data"),
 )
