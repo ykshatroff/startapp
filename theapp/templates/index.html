@@ -6,46 +6,12 @@
     <script type="text/javascript" src="{% static "js/contrib/jquery.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.time.min.js" %}"></script>
+    <script type="text/javascript" src="{% static "js/theapp.js" %}"></script>
     <script type="text/javascript">
-        var CHART_DIV_SELECTOR = "#chart";
-        var DATA_URL = '{% url "get_data" %}';
-        function mapData(points, input, column, label) {
-            var map = {
-                label: label,
-            };
-            var data = [];
-
-            for (var point=0, len=points.length-1; point<len; point++) {
-                data.push([points[point], input[point][column]]);
-            }
-            map.data = data;
-            return map;
-        }
-        function getData() {
-            var startTime = +(new Date())/1000;
-            var points = [];
-            for( var i=0; i<10; i++ ) {
-                points[i] = startTime + i;
-            }
-            $.getJSON(DATA_URL, function(data) {
-                var chartData = mapData(points, data.appInfo, 0, "test");
-                console.log(chartData);
-                $.plot(CHART_DIV_SELECTOR, [chartData], {
-                    xaxes: [ { mode: "time" } ],
-                    yaxes: [ { min: 0 }, {
-                        // align if we are to the right
-{#                        alignTicksWithAxis: position == "right" ? 1 : null,#}
-{#                        position: position,#}
-{#                        tickFormatter: euroFormatter#}
-                    } ],
-                    legend: { position: "sw" }
-			    });
-            })
-
-        }
         $(function() {
+            var theapp = TheApp.init();
             $("#click").click(function() {
-                getData();
+                theapp.loadData(0, '');
             })
         })
     </script>

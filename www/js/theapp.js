@@ -1,0 +1,249 @@
+/**
+ * Created by yks on 21.10.14.
+ */
+(function($) {
+    var theapp = window.TheApp = {
+        settings: {
+            DATA_URL: '/jx/stat/',  // the base URL of JSON data source
+            CHART_DIV_SELECTOR: "#chart",  // the jQuery selector of the canvas div
+            CHART_DIV_SIZE: {  // the width and height of the canvas div
+                width: "500px",
+                height: "300px"
+            },
+            PERIODS: {
+                '10 min': 600,
+                '1 hour': 3600,
+                '1 day': 86400
+            },
+            _dummy: null
+        },
+        cache: {},  // the result cache
+        labels: {
+            appInfo: [
+                "Доступность приложения",
+                "Кол-во регистраций",
+                "Лимит регистраций"
+            ],
+            appSuggStat: [
+                "Повторная регистрация",
+                "Рекомендация не найдена",
+                "Рекомендация самому себе",
+                "Регистрация по рекомендации",
+                "Самостоятельная регистрация",
+                "Награда за рекомендацию",
+                "Рекомендация",
+                "Лимит рекомендация исчерпан",
+                "Приложение не зарегистрировано",
+                "Первый платеж по рекомендации",
+                "Награда за повторный платеж по рекомендации",
+                "Награда за повторный платеж по рекомендации == 0",
+                "Повторный платеж по рекомендации",
+                "Первый платеж без рекомендации",
+                "Повторный платеж без рекомендации",
+                "Обновление состояния",
+            ],
+            "accountInfo": [
+                "Новый пользователь",
+                "Повторная попытка создания",
+                "Создание пользователя",
+                "Пользователь авторизован",
+                "Пользователь не авторизован (не верный пароль)",
+                "Пользователь не найден",
+            ],
+            "suggAccountInfo":[
+                "Новый пользователь",
+                "Повторная попытка создания",
+                "Создание пользователя",
+                "Пользователь авторизован",
+                "Пользователь не авторизован (не верный пароль)",
+                "Пользователь не найден",
+            ],
+            "webAccountInfo": [
+                "Новый пользователь",
+                "Повторная попытка создания",
+                "Создание пользователя",
+                "Пользователь авторизован",
+                "Пользователь не авторизован (не верный пароль)",
+                "Пользователь не найден",
+            ],
+            "dbStatStat": [
+                "Размер очереди в транзакциях",
+                "Максимальная очередь в транзакциях",
+                "Кол-во добавленных транзакций",
+                "Кол-во выполненных транзакций",
+                "Кол-во пустых транзакций",
+                "Кол-во NULL транзакций",
+                "Размер очереди в запросах",
+                "Максимальная очередь в запросах",
+                "Кол-во добавленных запросов",
+                "Кол-во выполненных запросов",
+            ],
+            "dbSuggStat": [
+                "Размер очереди в транзакциях",
+                "Максимальная очередь в транзакциях",
+                "Кол-во добавленных транзакций",
+                "Кол-во выполненных транзакций",
+                "Кол-во пустых транзакций",
+                "Кол-во NULL транзакций",
+                "Размер очереди в запросах",
+                "Максимальная очередь в запросах",
+                "Кол-во добавленных запросов",
+                "Кол-во выполненных запросов",
+            ],
+            "dbSessStat": [
+                "Размер очереди в транзакциях",
+                "Максимальная очередь в транзакциях",
+                "Кол-во добавленных транзакций",
+                "Кол-во выполненных транзакций",
+                "Кол-во пустых транзакций",
+                "Кол-во NULL транзакций",
+                "Размер очереди в запросах",
+                "Максимальная очередь в запросах",
+                "Кол-во добавленных запросов",
+                "Кол-во выполненных запросов",
+            ],
+
+            "fcgiStat": [
+                "Кол-во полученных сетевых запросов",
+                "Кол-во не верных сетевых запросов",
+                "Кол-во выполненных сетевых запросов",
+            ],
+
+            "fcgiProc": [
+                "Кол-во полученных fcgi-запросов",
+                "Кол-во SUGGEST fcgi-запросов",
+                "Кол-во ADMIN fcgi-запросов",
+                "Кол-во MONITOR fcgi-запросов",
+                "Кол-во пропущеных fcgi-запросов",
+                "Кол-во WOA fcgi-запросов",
+                "Кол-во WEB fcgi-запросов",
+            ],
+
+            "accListInfo": [
+                "Максимальный ID клиента",
+                "Кол-во почтовых адресов",
+                "Лимит почтовых адресов",
+                "Кол-во зарегистрированных клиентов",
+                "Лимит клиентов",
+            ],
+
+            "appListInfo":[
+                "Кол-во приложений",
+                "Лимит кол-ва приложений",
+            ],
+
+            "reqInfo": [
+                "Кол-во запросов со старым протоколом",
+                "Кол-во не верных запросов",
+                "Кол-во запросов на смену пароля",
+                "Кол-во запросов на смену ника",
+            ],
+        },
+
+        /** Initialization of TheApp, best done on document ready
+         *
+         * @param options
+         */
+        init: function(options) {
+            if (options) {
+                $.extend(theapp.settings, options);
+            }
+            var canvas = theapp.getCanvas();
+            if (! canvas.length) {
+                throw("No canvas element found");
+            }
+            // set canvas dimensions if not set in CSS
+            return theapp;
+        },
+
+        getCanvas: function() {
+            return $(theapp.settings.CHART_DIV_SELECTOR);
+        },
+
+        /** Make an AJAX request for JSON data and display results
+         *
+         * @param appId
+         * @param periodName string
+         */
+        loadData: function(appId, periodName) {
+            var url = theapp.settings.DATA_URL;
+            var query = {
+                APP_ID: appId,
+                PERIOD: theapp.settings.PERIODS[periodName] || 600
+            };
+            $.getJSON(url, query)
+                .done(function(data) {
+                    theapp.storeData(data);
+                    theapp.drawChart(data, "appInfo");
+                })
+            ;
+            return theapp;
+        },
+
+        getData: function(appId, periodName) {
+            var cache = theapp.cache;
+            if (appId in cache && periodName in cache[appId]) {
+                return cache[appId][periodName];
+            }
+            return undefined;
+        },
+
+        storeData: function(data, appId, periodName) {
+            var cache = theapp.cache;
+            var cacheByApp = cache[appId] = cache[appId] || {};  // initialize cache by app ID
+            cacheByApp[periodName] = data;  // save data into cache by period
+            return theapp;
+        },
+
+        drawChart: function(data, label) {
+            var points = data.time;
+            var period = data.period;
+            var startTime = data.startTime;
+            var graphLabels = theapp.labels[label];
+            var chartData = [];
+            for (var sourceIdx=0, len=graphLabels.length; sourceIdx<len; sourceIdx++) {
+                chartData.push(theapp.mapData(
+                        startTime,
+                        period,
+                        points,
+                        data[label],
+                        sourceIdx,
+                        graphLabels[sourceIdx]
+                ));
+            }
+
+            console.log(chartData);
+            $.plot(theapp.getCanvas(), chartData, {
+                xaxes: [ { mode: "time" } ],
+                yaxes: [ { min: 0 }, {
+                } ],
+                legend: { position: "sw" }
+            });
+            return theapp;
+        },
+
+        displayHeader: function() {
+
+        },
+
+        mapData: function(startTime, period, points, input, column, label) {
+            function adjustPoint(point) {
+                // convert time points into JS timestamps
+                return (startTime + point * period) * 1000;
+            }
+
+            var map = {
+                label: label,
+            };
+            var data = [];
+
+            for (var point=0, len=points.length-1; point<len; point++) {
+                data.push([adjustPoint(points[point]), input[point][column]]);
+            }
+            map.data = data;
+            return map;
+        }
+
+    };
+
+})(jQuery);

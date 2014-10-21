@@ -7,5 +7,5 @@ urlpatterns = patterns('',
     #url(r'^admin/', include(admin.site.urls)),
     #
     url(r'^$', 'theapp.views.index_view', name="index"),
-    url(r'^get_data/$', 'theapp.views.get_data_view', name="get_data"),
+    url(r'^jx/stat/$', 'theapp.views.get_data_view', name="get_data"),
 )

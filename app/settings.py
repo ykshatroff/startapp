@@ -48,7 +48,7 @@ USE_I18N = True
 USE_L10N = True
 
 # static files settings
-STATIC_URL = '/www/'
+STATIC_URL = '/res/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, "www")
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
