@@ -195,18 +195,29 @@
             return theapp;
         },
 
+        /** Draw chart based on JSON data
+         *
+         * The graph data has the following format:
+         *      section: [ x1: [y1,y2,y3...], x2: [y1,y2,y3...], ...]
+         * where xN is the time point index, yN are values
+         *
+         * @param data JSON
+         * @param section
+         * @returns chainable
+         */
         drawChart: function(data, section) {
             var points = data.time;
             var period = data.period;
             var startTime = data.startTime;
             var graphLabels = theapp.labels[section];
+            var graphData = data[section];
             var chartData = [];
             for (var sourceIdx=0, len=graphLabels.length; sourceIdx<len; sourceIdx++) {
                 chartData.push(theapp.mapData(
                         startTime,
                         period,
                         points,
-                        data[section],
+                        graphData,
                         sourceIdx,
                         graphLabels[sourceIdx]
                 ));
@@ -226,6 +237,16 @@
 
         },
 
+        /** Helper function for `drawChart`
+         *
+         * @param startTime
+         * @param period
+         * @param points
+         * @param input
+         * @param column
+         * @param label
+         * @returns {{label: *, data: [...]}}
+         */
         mapData: function(startTime, period, points, input, column, label) {
             function adjustPoint(point) {
                 // convert time points into JS timestamps
