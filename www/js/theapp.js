@@ -4,7 +4,9 @@
 (function($) {
     var theapp = window.TheApp = {
         settings: {
+            DEFAULT_SECTION: "appInfo",
             DATA_URL: '/jx/stat/',  // the base URL of JSON data source
+            HEADER_DIV_SELECTOR: "#chartHeader",  // the jQuery selector of the header div
             CHART_DIV_SELECTOR: "#chart",  // the jQuery selector of the canvas div
             CHART_DIV_SIZE: {  // the width and height of the canvas div
                 width: "500px",
@@ -152,6 +154,15 @@
             if (! canvas.length) {
                 throw("No canvas element found");
             }
+            // setup header
+            var headerDiv = $(theapp.settings.HEADER_DIV_SELECTOR);
+            headerDiv.on("click", "a", function() {
+                var section = $(this).attr("href").slice(1);
+                alert (section);
+                theapp.displayResult(section);
+                return false;
+            });
+            theapp.displayHeader();
             // set canvas dimensions if not set in CSS
             return theapp;
         },
@@ -165,7 +176,7 @@
          * @param appId
          * @param periodName string
          */
-        loadData: function(appId, periodName) {
+        loadData: function(appId, periodName, section) {
             var url = theapp.settings.DATA_URL;
             var query = {
                 APP_ID: appId,
@@ -174,7 +185,7 @@
             $.getJSON(url, query)
                 .done(function(data) {
                     theapp.storeData(data);
-                    theapp.drawChart(data, "appInfo");
+                    theapp.drawChart(data, section || theapp.settings.DEFAULT_SECTION);
                 })
             ;
             return theapp;
@@ -233,8 +244,29 @@
             return theapp;
         },
 
-        displayHeader: function() {
+        /** Display results for a section
+         * If chart data is loaded, draw chart immediately, otherwise load the data and display loader
+         *
+         * @param section
+         */
+        displayResult: function(section) {
+            var appId = 0;
+            var periodName = '10 min';
+            var data = theapp.getData(appId, periodName);
+            if (! data) {
+                return theapp.loadData(appId, periodName, section);
+            }
+            return theapp.drawChart(appId, section);
+        },
 
+        displayHeader: function() {
+            var headerDiv = $(theapp.settings.HEADER_DIV_SELECTOR);
+            headerDiv.html("");
+            for (var section in theapp.labels) {
+                headerDiv.append("<a href='#" + section + "'>" + section + "</a><br>");
+            }
+
+            return theapp;
         },
 
         /** Helper function for `drawChart`
