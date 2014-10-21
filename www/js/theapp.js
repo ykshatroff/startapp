@@ -195,18 +195,18 @@
             return theapp;
         },
 
-        drawChart: function(data, label) {
+        drawChart: function(data, section) {
             var points = data.time;
             var period = data.period;
             var startTime = data.startTime;
-            var graphLabels = theapp.labels[label];
+            var graphLabels = theapp.labels[section];
             var chartData = [];
             for (var sourceIdx=0, len=graphLabels.length; sourceIdx<len; sourceIdx++) {
                 chartData.push(theapp.mapData(
                         startTime,
                         period,
                         points,
-                        data[label],
+                        data[section],
                         sourceIdx,
                         graphLabels[sourceIdx]
                 ));
