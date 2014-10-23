@@ -2,13 +2,17 @@
  * Created by yks on 21.10.14.
  */
 (function($) {
+    function debug() {
+        window.console.log(Array.prototype.join.call(arguments, ","));
+    }
+
     var theapp = window.TheApp = {
         settings: {
             DEFAULT_SECTION: "appInfo",
             DATA_URL: '/jx/stat/',  // the base URL of JSON data source
             HEADER_DIV_SELECTOR: "#chartHeader",  // the jQuery selector of the header div
-            CHART_DIV_SELECTOR: "#chart",  // the jQuery selector of the canvas div
-            CHART_DIV_SIZE: {  // the width and height of the canvas div
+            CANVAS_SELECTOR: "#chart",  // the jQuery selector of the canvas div
+            CANVAS_SIZE: {  // the width and height of the canvas div
                 width: "500px",
                 height: "300px"
             },
@@ -19,7 +23,6 @@
             },
             _dummy: null
         },
-        cache: {},  // the result cache
         labels: {
             appInfo: [
                 "Доступность приложения",
@@ -142,6 +145,19 @@
             ],
         },
 
+        // private data
+        canvas: null,
+        headerDiv: null,
+        currentValues: {
+            appId: 0,
+            periodName: '10 min',
+            section: "appInfo"
+        },
+        cache: {},  // the result cache
+        // event name constants
+        ON_DATA_REQUEST: "data-request",
+        ON_DATA_READY: "data-ready",
+
         /** Initialization of TheApp, best done on document ready
          *
          * @param options
@@ -150,48 +166,83 @@
             if (options) {
                 $.extend(theapp.settings, options);
             }
+
+            // check that canvas is available
+            // TODO: set canvas dimensions if not set in CSS
             var canvas = theapp.getCanvas();
-            if (! canvas.length) {
-                throw("No canvas element found");
-            }
+
             // setup header
-            var headerDiv = $(theapp.settings.HEADER_DIV_SELECTOR);
-            headerDiv.on("click", "a", function() {
-                var section = $(this).attr("href").slice(1);
-                alert (section);
-                theapp.displayResult(section);
-                return false;
-            });
             theapp.displayHeader();
-            // set canvas dimensions if not set in CSS
+
+            // setup event handlers
+            var eventDispatcher = theapp.getEventDispatcher();
+            eventDispatcher.on(theapp.ON_DATA_READY, theapp.displayResult)
+
             return theapp;
         },
 
-        getCanvas: function() {
-            return $(theapp.settings.CHART_DIV_SELECTOR);
+        getEventDispatcher: function() {
+            return $("body");
         },
 
-        /** Make an AJAX request for JSON data and display results
+        getCanvas: function() {
+            if (! theapp.canvas) {
+                var canvas = $(theapp.settings.CANVAS_SELECTOR);
+                if (! canvas.length) {
+                    throw("No canvas element found");
+                }
+                theapp.canvas = canvas;
+            }
+            return theapp.canvas;
+        },
+
+        getHeaderDiv: function() {
+            if (! theapp.headerDiv) {
+                var headerDiv = $(theapp.settings.HEADER_DIV_SELECTOR);
+                if (! headerDiv.length) {
+                    throw("No header element found");
+                }
+                theapp.headerDiv = headerDiv;
+            }
+            return theapp.headerDiv;
+        },
+
+        /** Check cache for JSON data, or
+         *  make an AJAX request for JSON data and store it into cache,
+         *  Emit events
          *
          * @param appId
          * @param periodName string
          */
-        loadData: function(appId, periodName, section) {
+        loadData: function() {
+            var currentValues = theapp.currentValues;
+            var appId = currentValues.appId;
+            var periodName = currentValues.periodName;
+
+            // check data in cache
+            var data = theapp.getData(appId, periodName);
+            if (data) {
+                theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
+                return theapp;
+            }
+
             var url = theapp.settings.DATA_URL;
             var query = {
                 APP_ID: appId,
                 PERIOD: theapp.settings.PERIODS[periodName] || 600
             };
+            theapp.getEventDispatcher().trigger(theapp.ON_DATA_REQUEST);
             $.getJSON(url, query)
                 .done(function(data) {
-                    theapp.storeData(data);
-                    theapp.drawChart(data, section || theapp.settings.DEFAULT_SECTION);
+                    theapp.storeData(data, appId, periodName);
+                    theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
                 })
             ;
             return theapp;
         },
 
         getData: function(appId, periodName) {
+            debug("getData " + appId + ", " + periodName);
             var cache = theapp.cache;
             if (appId in cache && periodName in cache[appId]) {
                 return cache[appId][periodName];
@@ -200,6 +251,7 @@
         },
 
         storeData: function(data, appId, periodName) {
+            debug("setData " + appId + ", " + periodName);
             var cache = theapp.cache;
             var cacheByApp = cache[appId] = cache[appId] || {};  // initialize cache by app ID
             cacheByApp[periodName] = data;  // save data into cache by period
@@ -212,8 +264,8 @@
          *      section: [ x1: [y1,y2,y3...], x2: [y1,y2,y3...], ...]
          * where xN is the time point index, yN are values
          *
-         * @param data JSON
-         * @param section
+         * @param data = JSON
+         * @param section = key for the array of the names of labels
          * @returns chainable
          */
         drawChart: function(data, section) {
@@ -234,7 +286,7 @@
                 ));
             }
 
-            console.log(chartData);
+            debug(chartData);
             $.plot(theapp.getCanvas(), chartData, {
                 xaxes: [ { mode: "time" } ],
                 yaxes: [ { min: 0 }, {
@@ -244,39 +296,57 @@
             return theapp;
         },
 
-        /** Display results for a section
+        /** Display chart using the stored currentValues and data
          * If chart data is loaded, draw chart immediately, otherwise load the data and display loader
          *
-         * @param section
          */
-        displayResult: function(section) {
-            var appId = 0;
-            var periodName = '10 min';
-            var data = theapp.getData(appId, periodName);
-            if (! data) {
-                return theapp.loadData(appId, periodName, section);
-            }
-            return theapp.drawChart(appId, section);
+        displayResult: function() {
+            var currentValues = theapp.currentValues;
+            var data = theapp.getData(currentValues.appId, currentValues.periodName);
+            return theapp.drawChart(data, currentValues.section);
         },
 
         displayHeader: function() {
-            var headerDiv = $(theapp.settings.HEADER_DIV_SELECTOR);
+            var headerDiv = theapp.getHeaderDiv();
             headerDiv.html("");
-            for (var section in theapp.labels) {
-                headerDiv.append("<a href='#" + section + "'>" + section + "</a><br>");
+
+            var periodChoiceDiv = $("<div/>");
+            for (var periodName in theapp.settings.PERIODS) {
+                var html = $("<a href='#'>" + periodName + "</a><br>")
+                    .data("period_name", theapp.settings.PERIODS[periodName]);
+                periodChoiceDiv.append( html );
             }
+            periodChoiceDiv.on("click", "a", function() {
+                theapp.updateCurrentPeriod(this)
+                    .loadData()
+                ;
+            });
+            headerDiv.append(periodChoiceDiv);
+
+            var sectionDiv = $("<div/>");
+            for (var section in theapp.labels) {
+                var html = $("<a href='#'>" + section + "</a><br>")
+                    .data("section", section);
+                sectionDiv.append( html );
+            }
+            sectionDiv.on("click", "a", function() {
+                theapp.updateCurrentSection(this)
+                    .loadData()
+                ;
+            });
+            headerDiv.append(sectionDiv);
 
             return theapp;
         },
 
         /** Helper function for `drawChart`
          *
-         * @param startTime
-         * @param period
-         * @param points
-         * @param input
-         * @param column
-         * @param label
+         * @param startTime = UNIX timestamp of the start of measurement
+         * @param period = scale of measurement in seconds (X coord)
+         * @param points = measurement point numbers
+         * @param input = measurement values (2-dim Array)
+         * @param column = index of the measurement value corresponding to the `label`, in the `input`
+         * @param label = text description of the measurement
          * @returns {{label: *, data: [...]}}
          */
         mapData: function(startTime, period, points, input, column, label) {
@@ -287,6 +357,7 @@
 
             var map = {
                 label: label,
+                data: null
             };
             var data = [];
 
@@ -295,8 +366,50 @@
             }
             map.data = data;
             return map;
-        }
+        },
 
+        /** Update the appId value in currentValues from a HTML anchor data attribute (when clicked)
+         *
+         * @param htmlElement
+         * @returns = chainable
+         */
+        updateCurrentAppId: function(htmlElement) {
+            var appId = $(htmlElement).data("app_id");
+            if (0 + appId != 0 + theapp.currentValues.appId) {
+                theapp.currentValues.appId = appId;
+                theapp.loadData();
+            }
+            return theapp;
+        },
+
+        /** Update the periodName value in currentValues from a HTML anchor data attribute (when clicked)
+         *
+         * @param htmlElement
+         * @returns = chainable
+         */
+        updateCurrentPeriod: function(htmlElement) {
+            var periodName = $(htmlElement).data("period_name");
+            if (theapp.currentValues.periodName != periodName) {
+                theapp.currentValues.periodName = periodName;
+                theapp.loadData();
+            }
+
+            return theapp;
+        },
+
+        /** Update the section value in currentValues from a HTML anchor data attribute (when clicked)
+         *
+         * @param htmlElement
+         * @returns = chainable
+         */
+        updateCurrentSection: function(htmlElement) {
+            var section = $(htmlElement).data("section");
+            if (theapp.currentValues.section != section) {
+                theapp.currentValues.section = section;
+                theapp.loadData();
+            }
+            return theapp;
+        }
     };
 
 })(jQuery);

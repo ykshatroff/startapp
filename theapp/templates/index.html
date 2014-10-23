@@ -10,14 +10,15 @@
     <script type="text/javascript">
         $(function() {
             var theapp = TheApp.init();
-            $("#click").click(function() {
-                theapp.loadData(0, '');
-            })
+            $("button").click(function() {
+                theapp.updateCurrentAppId(this);
+            });
         })
     </script>
 </head>
 <body>
-    <button id="click">Get chart</button>
+    <button id="click0" data-app_id="0">App 0</button>
+    <button id="click1" data-app_id="1">App 1</button>
     <div id="chartHeader"></div>
     <div data-chart="yes" id="chart" style="width: 500px; height: 300px">
     </div>
