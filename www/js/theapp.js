@@ -229,7 +229,7 @@
             var url = theapp.settings.DATA_URL;
             var query = {
                 APP_ID: appId,
-                PERIOD: theapp.settings.PERIODS[periodName] || 600
+                PERIOD: theapp.settings.PERIODS[periodName]
             };
             theapp.getEventDispatcher().trigger(theapp.ON_DATA_REQUEST);
             $.getJSON(url, query)
@@ -313,13 +313,11 @@
             var periodChoiceDiv = $("<div/>");
             for (var periodName in theapp.settings.PERIODS) {
                 var html = $("<a href='#'>" + periodName + "</a><br>")
-                    .data("period_name", theapp.settings.PERIODS[periodName]);
+                    .data("period_name", periodName);
                 periodChoiceDiv.append( html );
             }
             periodChoiceDiv.on("click", "a", function() {
-                theapp.updateCurrentPeriod(this)
-                    .loadData()
-                ;
+                theapp.updateCurrentPeriod(this);
             });
             headerDiv.append(periodChoiceDiv);
 
@@ -330,9 +328,7 @@
                 sectionDiv.append( html );
             }
             sectionDiv.on("click", "a", function() {
-                theapp.updateCurrentSection(this)
-                    .loadData()
-                ;
+                theapp.updateCurrentSection(this);
             });
             headerDiv.append(sectionDiv);
 
