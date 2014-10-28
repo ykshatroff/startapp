@@ -236,6 +236,8 @@
                 .done(function(data) {
                     theapp.storeData(data, appId, periodName);
                     theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    alert("Ошибка: " + errorThrown)
                 })
             ;
             return theapp;
