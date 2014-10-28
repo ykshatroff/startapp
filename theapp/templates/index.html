@@ -3,6 +3,8 @@
 <html>
 <head>
     <title>The App</title>
+    <link href="/res/css/styles.css" rel="stylesheet">
+
     <script type="text/javascript" src="{% static "js/contrib/jquery.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.time.min.js" %}"></script>
@@ -17,10 +19,101 @@
     </script>
 </head>
 <body>
-    <button id="click0" data-app_id="0">App 0</button>
-    <button id="click1" data-app_id="1">App 1</button>
-    <div id="chartHeader"></div>
-    <div data-chart="yes" id="chart" style="width: 500px; height: 300px">
-    </div>
+    <div class="wrapper container">
+        <header>
+            Hi <b>y_shatrov!</b> (<a href="/logout/">logout</a>)
+            <form name="search" action="#" method="get" class="form-inline form-search pull-right">
+                <div class="input-group">
+                    <label class="sr-only" for="searchInput">Search</label>
+                    <input class="form-control" id="searchInput" type="text" name="search" placeholder="Search">
+                    <div class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">GO</button>
+                    </div>
+                </div>
+            </form>
+        </header>
+        <nav class="navbar navbar-default">
+            <ul class="nav navbar-nav">
+                <li><a href="/" >Home</a></li>
+                <li><a href="/custom/" >Customers</a></li>
+                <li class="active"><a href="/desc/" >For Developers</a></li>
+                <li><a href="/feedback/" >Feedback</a></li>
+                <li><a href="/forum/" >Forum</a></li>
+            </ul>
+        </nav>
+        <nav class="navbar navbar-default">
+            <ul class="nav navbar-nav">
+                <li><a href="/desc/" >Description</a></li>
+                <li class="active"><a href="/devapps/" >Applications</a></li>
+                <li><a href="/devacc/" >Account</a></li>
+            </ul>
+        </nav>
+        <div class="row">
+            <aside class="col-md-7">
+                <ul class="list-group submenu">
+                    <li class="list-group-item active"><a href="">General info</a></li>
+                    <li class="list-group-item active"><a href="">WoA</a></li>
+                </ul>
+            </aside>
+
+
+            <!-- COPY start -->
+            <section class="col-md-17">
+                <form name="chart">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label for="chart__app_id">Приложение:</label>
+                            <select name="app_id" id="chart__app_id">
+                                <option value="0">App 0</option>
+                                <option value="1">App 1</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            Период:
+                            <input type="radio" name="period" value="600" id="chart__period_600">
+                            <label for="chart__period_600">10 мин</label>
+                            <br>
+                            <input type="radio" name="period" value="3600" id="chart__period_3600">
+                            <label for="chart__period_3600">1 час</label>
+                            <br>
+                            <input type="radio" name="period" value="86400" id="chart__period_86400">
+                            <label for="chart__period_86400">1 сутки</label>
+                        </div>
+                        <div class="col-md-8" id="chartHeader"></div>
+                    </div>
+
+
+                </form>
+                <div data-chart="yes" id="chart" style="width: 500px; height: 300px">
+                </div>
+            </section>
+            <!-- COPY end -->
+
+	    </div>
+	</div>
+	<footer>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-4 social">
+					<h3>Social networks</h3>
+					<a href="http://twitter.com/" class="social-icon twitter"></a>
+					<a href="http://facebook.com/" class="social-icon facebook"></a>
+					<a href="http://plus.google.com/" class="social-icon google-plus"></a>
+					<a href="http://vimeo.com/" class="social-icon-small vimeo"></a>
+					<a href="http://youtube.com/" class="social-icon-small youtube"></a>
+					<a href="http://flickr.com/" class="social-icon-small flickr"></a>
+					<a href="http://instagram.com/" class="social-icon-small instagram"></a>
+					<a href="/rss/" class="social-icon-small rss"></a>
+				</div>
+				<div class="col-md-8 footer-logo">
+					<a href="/"><img src="" alt="Whitesquare logo"></a>
+					<p>
+						Copyright © 2012 Whitesquare. A <a href="http://pcklab.com">pcklab</a> creation
+					</p>
+				</div>
+			</div>
+		</div>
+	</footer>
+
 </body>
 </html>
