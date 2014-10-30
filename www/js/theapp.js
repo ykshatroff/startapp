@@ -16,6 +16,16 @@
         window.console.log(Array.prototype.join.call(arguments, ","));
     }
 
+    /** get first key-value pair from data object
+     *
+     * @param obj
+     * @returns []
+     */
+    function first(obj) {
+        for (var x in obj) return [ x, obj[x] ];
+        throw "Empty object";
+    }
+
     var theapp = window.TheApp = {
         settings: {
             DEFAULT_SECTION: "appInfo",
@@ -276,13 +286,12 @@
          * @returns object : theapp
          */
         drawChart: function(data, selectedParams) {
-            var firstKey = function(){for(var x in data) return x; throw "Empty data"};  // get first key from data
             // WTF JS :
             // [] == false, BUT
             // [] || 1 == []
             selectedParams = selectedParams instanceof Array && selectedParams.length > 0 ?
                 selectedParams :
-                [ firstKey() ];
+                [ first(data)[0] ];  // first key
 
             var chartData = [];
             for (var paramIndex=0, len=selectedParams.length; paramIndex<len; paramIndex++) {
