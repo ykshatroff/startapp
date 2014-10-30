@@ -1,5 +1,15 @@
 /**
  * Created by yks on 21.10.14.
+ *
+ * The expected JSON data format is:
+ * { ...
+ *   time: Array(...),
+ *   section1: Array( [param1_value, param2_value, ...], [...], ... )
+ *   section2: Array( [param1_value, param2_value, ...], [...], ... )
+ * }
+ * where the indices of the `section*` arrays correspond to those of the `time` array,
+ * and the value indices of the `section*` arrays correspond to parameter names defined in `labels` sections below
+ *
  */
 (function($) {
     function debug() {
@@ -151,7 +161,7 @@
         currentValues: {
             appId: 0,
             periodName: '10 min',
-            section: "appInfo"
+            selectedParams: []  // list of selected parameter names
         },
         cache: {},  // the result cache
         // event name constants
@@ -211,8 +221,6 @@
          *  make an AJAX request for JSON data and store it into cache,
          *  Emit events
          *
-         * @param appId
-         * @param periodName string
          */
         loadData: function() {
             var currentValues = theapp.currentValues;
@@ -256,7 +264,43 @@
             debug("setData " + appId + ", " + periodName);
             var cache = theapp.cache;
             var cacheByApp = cache[appId] = cache[appId] || {};  // initialize cache by app ID
-            cacheByApp[periodName] = data;  // save data into cache by period
+            var newData = theapp.transformData(data);
+            cacheByApp[periodName] = newData;  // save data into cache by period
+            return theapp;
+        },
+
+        /**
+         *
+         * @param data object : {paramName1: [ [x1,y1], [x2, y2], ... ], paramNameN: ... }
+         * @param selectedParams array : list of names of selected params
+         * @returns object : theapp
+         */
+        drawChart: function(data, selectedParams) {
+            var firstKey = function(){for(var x in data) return x; throw "Empty data"};  // get first key from data
+            // WTF JS :
+            // [] == false, BUT
+            // [] || 1 == []
+            selectedParams = selectedParams instanceof Array && selectedParams.length > 0 ?
+                selectedParams :
+                [ firstKey() ];
+
+            var chartData = [];
+            for (var paramIndex=0, len=selectedParams.length; paramIndex<len; paramIndex++) {
+                var paramName = selectedParams[paramIndex];
+                var seriesData = {
+                    label: paramName,
+                    data: data[paramName]
+                };
+                chartData.push(seriesData);
+            }
+
+            // TODO yaxes based on selectedParams
+            $.plot(theapp.getCanvas(), chartData, {
+                xaxes: [ { mode: "time" } ],
+                yaxes: [ { min: 0 }, {
+                } ],
+                legend: { position: "sw" }
+            });
             return theapp;
         },
 
@@ -268,9 +312,9 @@
          *
          * @param data = JSON
          * @param section = key for the array of the names of labels
-         * @returns chainable
+         * @returns object : theapp
          */
-        drawChart: function(data, section) {
+        drawChartX: function(data, section) {
             var points = data.time;
             var period = data.period;
             var startTime = data.startTime;
@@ -305,7 +349,7 @@
         displayResult: function() {
             var currentValues = theapp.currentValues;
             var data = theapp.getData(currentValues.appId, currentValues.periodName);
-            return theapp.drawChart(data, currentValues.section);
+            return theapp.drawChart(data, currentValues.selectedParams);
         },
 
         displayHeader: function() {
@@ -364,6 +408,54 @@
             }
             map.data = data;
             return map;
+        },
+
+        /** Transform server data from the server-defined format (see @head)
+         *  into an Object {paramName: Array(values)} where paramName is one of params
+         *  defined in `labels` sections, and values are the pairs (arrays) of an x-point and
+         *  the corresponding server-supplied y-value for this param.
+         *
+         * @param data JSON
+         * @returns Object data {paramName: Array([x1, y1], [x2, y2]...)}
+         * @throws error if invalid data
+         */
+        transformData: function(data) {
+            var startTime = data.startTime;
+            var period = data.period;
+            var points = data.time;
+            function adjustPoint(point) {
+                // convert time points into JS timestamps
+                return (startTime + point * period) * 1000;
+            }
+            var pointsNum = points.length;
+
+            var newData = {};
+            for (var section in theapp.labels) {
+                if (section in data) {
+                    var paramNames = theapp.labels[section];
+                    var dataSection = data[section];  // array (by time point index) of arrays (by param index)
+                    if (dataSection.length != pointsNum) {
+                        debug("invalid data for section '" + section + "'");
+                        throw("invalid data for section '" + section + "'");
+                    }
+
+                    // group data by parameter
+                    for (var paramIndex=0,paramNum=paramNames.length; paramIndex<paramNum; paramIndex++) {
+                        var values = [];
+                        var paramName = paramNames[paramIndex];
+                        // extract values corresponding to parameter index
+                        for (var pointIndex=0; pointIndex<pointsNum; pointIndex++) {
+                            var pair = [
+                                adjustPoint(points[pointIndex]),  // x
+                                dataSection[pointIndex][paramIndex]  // y
+                            ];
+                            values.push(pair);
+                        }
+                        newData[paramName] = values;
+                    }
+                }
+            }
+            return newData;
         },
 
         /** Update the appId value in currentValues from a HTML anchor data attribute (when clicked)
