@@ -170,7 +170,7 @@
         headerDiv: null,
         currentValues: {
             appId: 0,
-            periodName: '10 min',
+            period: null,  // e.g. theapp.settings.PERIODS['10 min']
             selectedParams: []  // list of selected parameter names
         },
         cache: {},  // the result cache
@@ -235,10 +235,10 @@
         loadData: function() {
             var currentValues = theapp.currentValues;
             var appId = currentValues.appId;
-            var periodName = currentValues.periodName;
+            var period = currentValues.period || first(theapp.settings.PERIODS)[1];  // first value
 
             // check data in cache
-            var data = theapp.getData(appId, periodName);
+            var data = theapp.getData(appId, period);
             if (data) {
                 theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
                 return theapp;
@@ -247,12 +247,12 @@
             var url = theapp.settings.DATA_URL;
             var query = {
                 APP_ID: appId,
-                PERIOD: theapp.settings.PERIODS[periodName]
+                PERIOD: period
             };
             theapp.getEventDispatcher().trigger(theapp.ON_DATA_REQUEST);
             $.getJSON(url, query)
                 .done(function(data) {
-                    theapp.storeData(data, appId, periodName);
+                    theapp.storeData(data, appId, period);
                     theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
                 }).fail(function(jqXHR, textStatus, errorThrown) {
                     alert("Ошибка: " + errorThrown)
@@ -261,21 +261,21 @@
             return theapp;
         },
 
-        getData: function(appId, periodName) {
-            debug("getData " + appId + ", " + periodName);
+        getData: function(appId, period) {
+            debug("getData " + appId + ", " + period);
             var cache = theapp.cache;
-            if (appId in cache && periodName in cache[appId]) {
-                return cache[appId][periodName];
+            if (appId in cache && period in cache[appId]) {
+                return cache[appId][period];
             }
             return undefined;
         },
 
-        storeData: function(data, appId, periodName) {
-            debug("setData " + appId + ", " + periodName);
+        storeData: function(data, appId, period) {
+            debug("setData " + appId + ", " + period);
             var cache = theapp.cache;
             var cacheByApp = cache[appId] = cache[appId] || {};  // initialize cache by app ID
             var newData = theapp.transformData(data);
-            cacheByApp[periodName] = newData;  // save data into cache by period
+            cacheByApp[period] = newData;  // save data into cache by period
             return theapp;
         },
 
@@ -357,7 +357,7 @@
          */
         displayResult: function() {
             var currentValues = theapp.currentValues;
-            var data = theapp.getData(currentValues.appId, currentValues.periodName);
+            var data = theapp.getData(currentValues.appId, currentValues.period);
             return theapp.drawChart(data, currentValues.selectedParams);
         },
 
@@ -481,22 +481,23 @@
             return theapp;
         },
 
-        /** Update the periodName value in currentValues from a HTML anchor data attribute (when clicked)
+        /** Update the periodName value in currentValues from a HTML value or data attribute (when clicked)
          *
-         * @param htmlElement
+         * @param htmlElement (selector, domElement ...)
          * @returns = chainable
          */
         updateCurrentPeriod: function(htmlElement) {
-            var periodName = $(htmlElement).data("period_name");
-            if (theapp.currentValues.periodName != periodName) {
-                theapp.currentValues.periodName = periodName;
+            htmlElement = $(htmlElement);
+            var period = htmlElement.val() || htmlElement.data("period");
+            if (theapp.currentValues.period != period) {
+                theapp.currentValues.period = period;
                 theapp.loadData();
             }
 
             return theapp;
         },
 
-        /** Update the section value in currentValues from a HTML anchor data attribute (when clicked)
+        /** Update the section value in currentValues from a HTML value or data attribute (when clicked)
          *
          * @param htmlElement
          * @returns = chainable
