@@ -11,10 +11,7 @@
     <script type="text/javascript" src="{% static "js/theapp.js" %}"></script>
     <script type="text/javascript">
         $(function() {
-            var theapp = TheApp.init();
-            $("button").click(function() {
-                theapp.updateCurrentAppId(this);
-            });
+            TheApp.init();
         })
     </script>
 </head>
