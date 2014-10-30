@@ -186,7 +186,7 @@
 
             // setup event handlers
             var eventDispatcher = theapp.getEventDispatcher();
-            eventDispatcher.on(theapp.ON_DATA_READY, theapp.displayResult)
+            eventDispatcher.on(theapp.ON_DATA_READY, theapp.displayResult);
 
             return theapp;
         },
