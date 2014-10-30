@@ -10,6 +10,8 @@
  * where the indices of the `section*` arrays correspond to those of the `time` array,
  * and the value indices of the `section*` arrays correspond to parameter names defined in `labels` sections below
  *
+ * The control form must contain inputs: app_id, period, param_names
+ *
  */
 (function($) {
     function debug() {
@@ -28,14 +30,15 @@
 
     var theapp = window.TheApp = {
         settings: {
-            DEFAULT_SECTION: "appInfo",
-            DATA_URL: '/jx/stat/',  // the base URL of JSON data source
-            HEADER_DIV_SELECTOR: "#chartHeader",  // the jQuery selector of the header div
             CANVAS_SELECTOR: "#chart",  // the jQuery selector of the canvas div
             CANVAS_SIZE: {  // the width and height of the canvas div
                 width: "500px",
                 height: "300px"
             },
+            DATA_URL: '/jx/stat/',  // the base URL of JSON data source
+            DEFAULT_SECTION: "appInfo",
+            FORM_SELECTOR: "form[name=chart]",  // the jQuery selector of the control form div
+            HEADER_DIV_SELECTOR: "#chartHeader",  // the jQuery selector of the header div
             PERIODS: {
                 '10 min': 600,
                 '1 hour': 3600,
@@ -169,7 +172,7 @@
         canvas: null,
         headerDiv: null,
         currentValues: {
-            appId: 0,
+            appId: "",  // string
             period: null,  // e.g. theapp.settings.PERIODS['10 min']
             selectedParams: []  // list of selected parameter names
         },
@@ -191,18 +194,49 @@
             // TODO: set canvas dimensions if not set in CSS
             var canvas = theapp.getCanvas();
 
-            // setup header
-            theapp.displayHeader();
+            // setup control elements
+            theapp.setupControls();
 
             // setup event handlers
             var eventDispatcher = theapp.getEventDispatcher();
             eventDispatcher.on(theapp.ON_DATA_READY, theapp.displayResult);
+
+            theapp.loadData();
 
             return theapp;
         },
 
         getEventDispatcher: function() {
             return $("body");
+        },
+
+        setupControls: function() {
+            var controlDispatcher = $(theapp.settings.FORM_SELECTOR);
+            if (! controlDispatcher.length) {
+                throw("No root control element (form) found");
+            }
+
+            // assert that period is an input type=radio
+            if ( !$("[name=period]:checked").length ) {
+                $("[name=period]")[0].checked = true;
+            }
+            theapp.updateCurrentPeriod("[name=period]:checked");
+            controlDispatcher.on("change", "[name=period]", function() {
+                theapp.updateCurrentPeriod("[name=period]:checked");
+            });
+
+            // assert that app_id is a select
+            theapp.updateCurrentAppId("[name=app_id]");
+            controlDispatcher.on("change", "[name=app_id]", function() {
+                theapp.updateCurrentAppId("[name=app_id]");
+            });
+
+            // assert that param_name is a select multiple
+            controlDispatcher.on("change", "[name=param_name]", function() {
+                theapp.updateSelectedParams("[name=param_name]");
+            });
+
+            return theapp;
         },
 
         getCanvas: function() {
@@ -216,21 +250,11 @@
             return theapp.canvas;
         },
 
-        getHeaderDiv: function() {
-            if (! theapp.headerDiv) {
-                var headerDiv = $(theapp.settings.HEADER_DIV_SELECTOR);
-                if (! headerDiv.length) {
-                    throw("No header element found");
-                }
-                theapp.headerDiv = headerDiv;
-            }
-            return theapp.headerDiv;
-        },
-
         /** Check cache for JSON data, or
          *  make an AJAX request for JSON data and store it into cache,
          *  Emit events
          *
+         * @returns  object theapp
          */
         loadData: function() {
             var currentValues = theapp.currentValues;
@@ -313,44 +337,6 @@
             return theapp;
         },
 
-        /** Draw chart based on JSON data
-         *
-         * The graph data has the following format:
-         *      section: [ x1: [y1,y2,y3...], x2: [y1,y2,y3...], ...]
-         * where xN is the time point index, yN are values
-         *
-         * @param data = JSON
-         * @param section = key for the array of the names of labels
-         * @returns object : theapp
-         */
-        drawChartX: function(data, section) {
-            var points = data.time;
-            var period = data.period;
-            var startTime = data.startTime;
-            var graphLabels = theapp.labels[section];
-            var graphData = data[section];
-            var chartData = [];
-            for (var sourceIdx=0, len=graphLabels.length; sourceIdx<len; sourceIdx++) {
-                chartData.push(theapp.mapData(
-                        startTime,
-                        period,
-                        points,
-                        graphData,
-                        sourceIdx,
-                        graphLabels[sourceIdx]
-                ));
-            }
-
-            debug(chartData);
-            $.plot(theapp.getCanvas(), chartData, {
-                xaxes: [ { mode: "time" } ],
-                yaxes: [ { min: 0 }, {
-                } ],
-                legend: { position: "sw" }
-            });
-            return theapp;
-        },
-
         /** Display chart using the stored currentValues and data
          * If chart data is loaded, draw chart immediately, otherwise load the data and display loader
          *
@@ -359,64 +345,6 @@
             var currentValues = theapp.currentValues;
             var data = theapp.getData(currentValues.appId, currentValues.period);
             return theapp.drawChart(data, currentValues.selectedParams);
-        },
-
-        displayHeader: function() {
-            var headerDiv = theapp.getHeaderDiv();
-            headerDiv.html("");
-
-            var periodChoiceDiv = $("<div/>");
-            for (var periodName in theapp.settings.PERIODS) {
-                var html = $("<a href='#'>" + periodName + "</a><br>")
-                    .data("period_name", periodName);
-                periodChoiceDiv.append( html );
-            }
-            periodChoiceDiv.on("click", "a", function() {
-                theapp.updateCurrentPeriod(this);
-            });
-            headerDiv.append(periodChoiceDiv);
-
-            var sectionDiv = $("<div/>");
-            for (var section in theapp.labels) {
-                var html = $("<a href='#'>" + section + "</a><br>")
-                    .data("section", section);
-                sectionDiv.append( html );
-            }
-            sectionDiv.on("click", "a", function() {
-                theapp.updateCurrentSection(this);
-            });
-            headerDiv.append(sectionDiv);
-
-            return theapp;
-        },
-
-        /** Helper function for `drawChart`
-         *
-         * @param startTime = UNIX timestamp of the start of measurement
-         * @param period = scale of measurement in seconds (X coord)
-         * @param points = measurement point numbers
-         * @param input = measurement values (2-dim Array)
-         * @param column = index of the measurement value corresponding to the `label`, in the `input`
-         * @param label = text description of the measurement
-         * @returns {{label: *, data: [...]}}
-         */
-        mapData: function(startTime, period, points, input, column, label) {
-            function adjustPoint(point) {
-                // convert time points into JS timestamps
-                return (startTime + point * period) * 1000;
-            }
-
-            var map = {
-                label: label,
-                data: null
-            };
-            var data = [];
-
-            for (var point=0, len=points.length-1; point<len; point++) {
-                data.push([adjustPoint(points[point]), input[point][column]]);
-            }
-            map.data = data;
-            return map;
         },
 
         /** Transform server data from the server-defined format (see @head)
@@ -467,14 +395,15 @@
             return newData;
         },
 
-        /** Update the appId value in currentValues from a HTML anchor data attribute (when clicked)
+        /** Update the appId value in currentValues from a HTML value or data attribute (when clicked)
          *
-         * @param htmlElement
-         * @returns = chainable
+         * @param htmlElement (selector, domElement ...)
+         * @returns object theapp
          */
         updateCurrentAppId: function(htmlElement) {
-            var appId = $(htmlElement).data("app_id");
-            if (0 + appId != 0 + theapp.currentValues.appId) {
+            htmlElement = $(htmlElement);
+            var appId = htmlElement.val() || htmlElement.data("app_id");
+            if (appId != theapp.currentValues.appId) {
                 theapp.currentValues.appId = appId;
                 theapp.loadData();
             }
@@ -484,7 +413,7 @@
         /** Update the periodName value in currentValues from a HTML value or data attribute (when clicked)
          *
          * @param htmlElement (selector, domElement ...)
-         * @returns = chainable
+         * @returns object theapp
          */
         updateCurrentPeriod: function(htmlElement) {
             htmlElement = $(htmlElement);
@@ -500,10 +429,25 @@
         /** Update the section value in currentValues from a HTML value or data attribute (when clicked)
          *
          * @param htmlElement
-         * @returns = chainable
+         * @returns object theapp
          */
         updateCurrentSection: function(htmlElement) {
             var section = $(htmlElement).data("section");
+            if (theapp.currentValues.section != section) {
+                theapp.currentValues.section = section;
+                theapp.loadData();
+            }
+            return theapp;
+        },
+
+        /** Update the section value in currentValues from a HTML value or data attribute (when clicked)
+         *
+         * @param htmlElement
+         * @returns object theapp
+         */
+        updateSelectedParams: function(htmlElement) {
+            htmlElement = $(htmlElement);
+            var selectedParams = htmlElement.data("section");
             if (theapp.currentValues.section != section) {
                 theapp.currentValues.section = section;
                 theapp.loadData();

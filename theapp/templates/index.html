@@ -61,6 +61,9 @@
                         <div class="col-md-8">
                             <label for="chart__app_id">Приложение:</label>
                             <select name="app_id" id="chart__app_id">
+                                <!-- Список приложений:
+                                    <option value="{ appId }">{ app name }</option>
+                                 -->
                                 <option value="0">App 0</option>
                                 <option value="1">App 1</option>
                             </select>
@@ -76,10 +79,16 @@
                             <input type="radio" name="period" value="86400" id="chart__period_86400">
                             <label for="chart__period_86400">1 сутки</label>
                         </div>
-                        <div class="col-md-8" id="chartHeader"></div>
+                        <div class="col-md-8">
+                            Параметры:
+                            <div id="chart__selectedParams">
+                            </div>
+                            <div class="param_names">
+                                <select name="param_names" id="chart__param_names">
+                                </select>
+                            </div>
+                        </div>
                     </div>
-
-
                 </form>
                 <div data-chart="yes" id="chart" style="width: 500px; height: 300px">
                 </div>
