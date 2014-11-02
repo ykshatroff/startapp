@@ -1,6 +1,8 @@
 /**
  * Created by yks on 21.10.14.
  *
+ * Requires: jquery, flot, underscore
+ *
  * The expected JSON data format is:
  * { ...
  *   time: Array(...),
@@ -13,19 +15,9 @@
  * The control form must contain inputs: app_id, period, param_names
  *
  */
-(function($) {
+(function($, _) {
     function debug() {
         window.console.log(Array.prototype.join.call(arguments, ","));
-    }
-
-    /** get first key-value pair from data object
-     *
-     * @param obj
-     * @returns []
-     */
-    function first(obj) {
-        for (var x in obj) return [ x, obj[x] ];
-        throw "Empty object";
     }
 
     var theapp = window.TheApp = {
@@ -174,12 +166,15 @@
         currentValues: {
             appId: "",  // string
             period: null,  // e.g. theapp.settings.PERIODS['10 min']
+            availableParams: [],  // list of available parameter names
             selectedParams: []  // list of selected parameter names
         },
         cache: {},  // the result cache
         // event name constants
         ON_DATA_REQUEST: "data-request",
         ON_DATA_READY: "data-ready",
+        ON_AVAILABLE_PARAMS_CHANGE: "available-params-change",
+        ON_SELECTED_PARAMS_CHANGE: "selected-params-change",
 
         /** Initialization of TheApp, best done on document ready
          *
@@ -210,30 +205,54 @@
             return $("body");
         },
 
+        getControlDispatcher: function() {
+            return $(theapp.settings.FORM_SELECTOR);
+        },
+
         setupControls: function() {
-            var controlDispatcher = $(theapp.settings.FORM_SELECTOR);
+            var controlDispatcher = theapp.getControlDispatcher();
             if (! controlDispatcher.length) {
                 throw("No root control element (form) found");
             }
 
             // assert that period is an input type=radio
-            if ( !$("[name=period]:checked").length ) {
-                $("[name=period]")[0].checked = true;
+            var periodInputSelector = "[name=period]";
+            var periodInputSelectorChecked = periodInputSelector + ":checked";
+            if ( !$(periodInputSelectorChecked).length ) {
+                $(periodInputSelector)[0].checked = true;
             }
-            theapp.updateCurrentPeriod("[name=period]:checked");
-            controlDispatcher.on("change", "[name=period]", function() {
-                theapp.updateCurrentPeriod("[name=period]:checked");
+            theapp.currentValues.period = $(periodInputSelectorChecked).val();
+            $(periodInputSelector).on("change", function() {
+                theapp.updateCurrentPeriod(this);
             });
 
             // assert that app_id is a select
-            theapp.updateCurrentAppId("[name=app_id]");
-            controlDispatcher.on("change", "[name=app_id]", function() {
-                theapp.updateCurrentAppId("[name=app_id]");
+            var appIdSelector = "[name=app_id]";
+            theapp.currentValues.appId = $(appIdSelector).val();
+            $(appIdSelector).on("change", function() {
+                theapp.updateCurrentAppId(this);
             });
 
-            // assert that param_name is a select multiple
-            controlDispatcher.on("change", "[name=param_name]", function() {
-                theapp.updateSelectedParams("[name=param_name]");
+            // assert that param_names is a select
+            var paramsSelector = "[name=param_names]";
+            // append to the select all possible params as hidden options,
+            // which will appear when available in chart data
+            var $paramsSelector = $(paramsSelector);
+            $paramsSelector.on("change", function() {
+                theapp.selectParam(this.selectedOptions[0].text);
+                return false;
+            });
+
+            controlDispatcher.find("#chart__selectedParams").on("click", "a", function() {
+                theapp.deselectParam($(this.parentNode).find("span").text());
+            });
+
+            theapp.getEventDispatcher().on(theapp.ON_AVAILABLE_PARAMS_CHANGE, function() {
+                theapp.updateSelectedParams($paramsSelector);
+            });
+
+            theapp.getEventDispatcher().on(theapp.ON_SELECTED_PARAMS_CHANGE, function() {
+                theapp.updateSelectedParams($paramsSelector);
             });
 
             return theapp;
@@ -259,7 +278,7 @@
         loadData: function() {
             var currentValues = theapp.currentValues;
             var appId = currentValues.appId;
-            var period = currentValues.period || first(theapp.settings.PERIODS)[1];  // first value
+            var period = currentValues.period || _.values(theapp.settings.PERIODS)[0];  // first value
 
             // check data in cache
             var data = theapp.getData(appId, period);
@@ -315,7 +334,12 @@
             // [] || 1 == []
             selectedParams = selectedParams instanceof Array && selectedParams.length > 0 ?
                 selectedParams :
-                [ first(data)[0] ];  // first key
+                function() {
+                    var first = _.keys(data)[0];  // get first key
+                    if (first) return [ first ];
+                    throw "Empty data";  // raise an error
+                }();
+
 
             var chartData = [];
             for (var paramIndex=0, len=selectedParams.length; paramIndex<len; paramIndex++) {
@@ -344,6 +368,14 @@
         displayResult: function() {
             var currentValues = theapp.currentValues;
             var data = theapp.getData(currentValues.appId, currentValues.period);
+
+            currentValues.availableParams = _.keys(data);
+            if (! currentValues.selectedParams.length) {
+                currentValues.selectedParams = [ currentValues.availableParams[0] ];  // first key
+            } else {
+                currentValues.selectedParams = _.intersection(currentValues.availableParams, currentValues.selectedParams);
+            }
+            theapp.getEventDispatcher().trigger(theapp.ON_AVAILABLE_PARAMS_CHANGE);
             return theapp.drawChart(data, currentValues.selectedParams);
         },
 
@@ -392,10 +424,13 @@
                     }
                 }
             }
+            if (_.isEmpty(newData)) {
+                throw "Empty data";
+            }
             return newData;
         },
 
-        /** Update the appId value in currentValues from a HTML value or data attribute (when clicked)
+        /** Update the appId value in currentValues from a HTML value or data attribute
          *
          * @param htmlElement (selector, domElement ...)
          * @returns object theapp
@@ -410,7 +445,7 @@
             return theapp;
         },
 
-        /** Update the periodName value in currentValues from a HTML value or data attribute (when clicked)
+        /** Update the periodName value in currentValues from a HTML value or data attribute
          *
          * @param htmlElement (selector, domElement ...)
          * @returns object theapp
@@ -426,34 +461,60 @@
             return theapp;
         },
 
-        /** Update the section value in currentValues from a HTML value or data attribute (when clicked)
+        /** Update the selected params in currentValues
          *
-         * @param htmlElement
+         * @param htmlElement (a select?)
          * @returns object theapp
          */
-        updateCurrentSection: function(htmlElement) {
-            var section = $(htmlElement).data("section");
-            if (theapp.currentValues.section != section) {
-                theapp.currentValues.section = section;
+        updateSelectedParams: function(htmlElement) {
+            var controlDispatcher = theapp.getControlDispatcher();  // aka <form>
+            var $select = $(htmlElement);   // aka <select>
+            var availableParams = theapp.currentValues.availableParams;
+            var selectedParams = theapp.currentValues.selectedParams;
+
+            // fill the <select> with available params excluding selected
+            $select.find("option:first").nextAll().remove();
+            _.each(availableParams, function(label) {
+                if (! _.contains(selectedParams, label)) {
+                    $select.append($("<option>").text(label));
+                }
+            });
+
+            // build the list of selected params using a HTML template
+            var $target = controlDispatcher.find("#chart__selectedParams");
+            var $template = $target.find("._template");
+            $template.nextAll().remove();
+            _.each(selectedParams, function(label) {
+                var $node = $template.clone().removeClass("hidden _template");
+                $node.find("span").text(label);
+                $target.append($node);
+            });
+
+            return theapp;
+        },
+
+        selectParam: function(label) {
+            var availableParams = theapp.currentValues.availableParams;
+            var selectedParams = theapp.currentValues.selectedParams;
+            if (_.contains(availableParams, label) && ! _.contains(selectedParams, label)) {
+                selectedParams.push(label);
+                theapp.getEventDispatcher().trigger(theapp.ON_SELECTED_PARAMS_CHANGE);
                 theapp.loadData();
             }
             return theapp;
         },
 
-        /** Update the section value in currentValues from a HTML value or data attribute (when clicked)
-         *
-         * @param htmlElement
-         * @returns object theapp
-         */
-        updateSelectedParams: function(htmlElement) {
-            htmlElement = $(htmlElement);
-            var selectedParams = htmlElement.data("section");
-            if (theapp.currentValues.section != section) {
-                theapp.currentValues.section = section;
+        deselectParam: function(label) {
+            var availableParams = theapp.currentValues.availableParams;
+            var selectedParams = theapp.currentValues.selectedParams;
+            var index = _.indexOf(selectedParams, label);
+            if (index != -1) {
+                delete selectedParams[index];
+                theapp.getEventDispatcher().trigger(theapp.ON_SELECTED_PARAMS_CHANGE);
                 theapp.loadData();
             }
             return theapp;
         }
     };
 
-})(jQuery);
+})(jQuery, _);

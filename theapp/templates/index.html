@@ -5,6 +5,7 @@
     <title>The App</title>
     <link href="/res/css/styles.css" rel="stylesheet">
 
+    <script type="text/javascript" src="{% static "js/contrib/underscore-min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.time.min.js" %}"></script>
@@ -82,9 +83,13 @@
                         <div class="col-md-8">
                             Параметры:
                             <div id="chart__selectedParams">
+                                <div class="hidden _template">
+                                    <span>Тестовый параметр</span> <a href="#">X</a>
+                                </div>
                             </div>
                             <div class="param_names">
                                 <select name="param_names" id="chart__param_names">
+                                    <option>+++ Добавить параметр +++</option>
                                 </select>
                             </div>
                         </div>
