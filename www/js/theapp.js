@@ -20,7 +20,7 @@
         window.console.log(Array.prototype.join.call(arguments, ","));
     }
 
-    var theapp = window.TheApp = {
+    var self = window.TheApp = {
         settings: {
             CANVAS_SELECTOR: "#chart",  // the jQuery selector of the canvas div
             CANVAS_SIZE: {  // the width and height of the canvas div
@@ -36,6 +36,7 @@
                 '1 hour': 3600,
                 '1 day': 86400
             },
+            SELECTED_PARAMS_SELECTOR: "._selected_params",
             _dummy: null
         },
         labels: {
@@ -165,7 +166,7 @@
         headerDiv: null,
         currentValues: {
             appId: "",  // string
-            period: null,  // e.g. theapp.settings.PERIODS['10 min']
+            period: null,  // e.g. self.settings.PERIODS['10 min']
             availableParams: [],  // list of available parameter names
             selectedParams: []  // list of selected parameter names
         },
@@ -182,23 +183,23 @@
          */
         init: function(options) {
             if (options) {
-                $.extend(theapp.settings, options);
+                $.extend(self.settings, options);
             }
 
             // check that canvas is available
             // TODO: set canvas dimensions if not set in CSS
-            var canvas = theapp.getCanvas();
+            var canvas = self.getCanvas();
 
             // setup control elements
-            theapp.setupControls();
+            self.setupControls();
 
             // setup event handlers
-            var eventDispatcher = theapp.getEventDispatcher();
-            eventDispatcher.on(theapp.ON_DATA_READY, theapp.displayResult);
+            var eventDispatcher = self.getEventDispatcher();
+            eventDispatcher.on(self.ON_DATA_READY, self.displayResult);
 
-            theapp.loadData();
+            self.loadData();
 
-            return theapp;
+            return self;
         },
 
         getEventDispatcher: function() {
@@ -206,11 +207,11 @@
         },
 
         getControlDispatcher: function() {
-            return $(theapp.settings.FORM_SELECTOR);
+            return $(self.settings.FORM_SELECTOR);
         },
 
         setupControls: function() {
-            var controlDispatcher = theapp.getControlDispatcher();
+            var controlDispatcher = self.getControlDispatcher();
             if (! controlDispatcher.length) {
                 throw("No root control element (form) found");
             }
@@ -221,16 +222,16 @@
             if ( !$(periodInputSelectorChecked).length ) {
                 $(periodInputSelector)[0].checked = true;
             }
-            theapp.currentValues.period = $(periodInputSelectorChecked).val();
+            self.currentValues.period = $(periodInputSelectorChecked).val();
             $(periodInputSelector).on("change", function() {
-                theapp.updateCurrentPeriod(this);
+                self.updateCurrentPeriod(this);
             });
 
             // assert that app_id is a select
             var appIdSelector = "[name=app_id]";
-            theapp.currentValues.appId = $(appIdSelector).val();
+            self.currentValues.appId = $(appIdSelector).val();
             $(appIdSelector).on("change", function() {
-                theapp.updateCurrentAppId(this);
+                self.updateCurrentAppId(this);
             });
 
             // assert that param_names is a select
@@ -239,74 +240,74 @@
             // which will appear when available in chart data
             var $paramsSelector = $(paramsSelector);
             $paramsSelector.on("change", function() {
-                theapp.selectParam(this.selectedOptions[0].text);
+                self.selectParam(this.selectedOptions[0].text);
                 return false;
             });
 
-            controlDispatcher.find("#chart__selectedParams").on("click", "a", function() {
-                theapp.deselectParam($(this.parentNode).find("span").text());
+            controlDispatcher.find(self.settings.SELECTED_PARAMS_SELECTOR).on("click", "a", function() {
+                self.deselectParam($(this.parentNode).find("span").text());
             });
 
-            theapp.getEventDispatcher().on(theapp.ON_AVAILABLE_PARAMS_CHANGE, function() {
-                theapp.updateSelectedParams($paramsSelector);
+            self.getEventDispatcher().on(self.ON_AVAILABLE_PARAMS_CHANGE, function() {
+                self.updateSelectedParams($paramsSelector);
             });
 
-            theapp.getEventDispatcher().on(theapp.ON_SELECTED_PARAMS_CHANGE, function() {
-                theapp.updateSelectedParams($paramsSelector);
+            self.getEventDispatcher().on(self.ON_SELECTED_PARAMS_CHANGE, function() {
+                self.updateSelectedParams($paramsSelector);
             });
 
-            return theapp;
+            return self;
         },
 
         getCanvas: function() {
-            if (! theapp.canvas) {
-                var canvas = $(theapp.settings.CANVAS_SELECTOR);
+            if (! self.canvas) {
+                var canvas = $(self.settings.CANVAS_SELECTOR);
                 if (! canvas.length) {
                     throw("No canvas element found");
                 }
-                theapp.canvas = canvas;
+                self.canvas = canvas;
             }
-            return theapp.canvas;
+            return self.canvas;
         },
 
         /** Check cache for JSON data, or
          *  make an AJAX request for JSON data and store it into cache,
          *  Emit events
          *
-         * @returns  object theapp
+         * @returns  object self
          */
         loadData: function() {
-            var currentValues = theapp.currentValues;
+            var currentValues = self.currentValues;
             var appId = currentValues.appId;
-            var period = currentValues.period || _.values(theapp.settings.PERIODS)[0];  // first value
+            var period = currentValues.period || _.values(self.settings.PERIODS)[0];  // first value
 
             // check data in cache
-            var data = theapp.getData(appId, period);
+            var data = self.getData(appId, period);
             if (data) {
-                theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
-                return theapp;
+                self.getEventDispatcher().trigger(self.ON_DATA_READY);
+                return self;
             }
 
-            var url = theapp.settings.DATA_URL;
+            var url = self.settings.DATA_URL;
             var query = {
                 APP_ID: appId,
                 PERIOD: period
             };
-            theapp.getEventDispatcher().trigger(theapp.ON_DATA_REQUEST);
+            self.getEventDispatcher().trigger(self.ON_DATA_REQUEST);
             $.getJSON(url, query)
                 .done(function(data) {
-                    theapp.storeData(data, appId, period);
-                    theapp.getEventDispatcher().trigger(theapp.ON_DATA_READY);
+                    self.storeData(data, appId, period);
+                    self.getEventDispatcher().trigger(self.ON_DATA_READY);
                 }).fail(function(jqXHR, textStatus, errorThrown) {
                     alert("Ошибка: " + errorThrown)
                 })
             ;
-            return theapp;
+            return self;
         },
 
         getData: function(appId, period) {
             debug("getData " + appId + ", " + period);
-            var cache = theapp.cache;
+            var cache = self.cache;
             if (appId in cache && period in cache[appId]) {
                 return cache[appId][period];
             }
@@ -315,18 +316,18 @@
 
         storeData: function(data, appId, period) {
             debug("setData " + appId + ", " + period);
-            var cache = theapp.cache;
+            var cache = self.cache;
             var cacheByApp = cache[appId] = cache[appId] || {};  // initialize cache by app ID
-            var newData = theapp.transformData(data);
+            var newData = self.transformData(data);
             cacheByApp[period] = newData;  // save data into cache by period
-            return theapp;
+            return self;
         },
 
         /**
          *
          * @param data object : {paramName1: [ [x1,y1], [x2, y2], ... ], paramNameN: ... }
          * @param selectedParams array : list of names of selected params
-         * @returns object : theapp
+         * @returns object : self
          */
         drawChart: function(data, selectedParams) {
             // WTF JS :
@@ -346,19 +347,28 @@
                 var paramName = selectedParams[paramIndex];
                 var seriesData = {
                     label: paramName,
+                    yaxis: 1 + paramIndex % 2,
                     data: data[paramName]
                 };
                 chartData.push(seriesData);
             }
 
             // TODO yaxes based on selectedParams
-            $.plot(theapp.getCanvas(), chartData, {
+            $.plot(self.getCanvas(), chartData, {
                 xaxes: [ { mode: "time" } ],
-                yaxes: [ { min: 0 }, {
-                } ],
+                yaxes: [
+                    {
+                        min: 0,
+                        position: "left",
+                    },
+                    {
+                        min: 0,
+                        position: "right",
+                    }
+                ],
                 legend: { position: "sw" }
             });
-            return theapp;
+            return self;
         },
 
         /** Display chart using the stored currentValues and data
@@ -366,8 +376,8 @@
          *
          */
         displayResult: function() {
-            var currentValues = theapp.currentValues;
-            var data = theapp.getData(currentValues.appId, currentValues.period);
+            var currentValues = self.currentValues;
+            var data = self.getData(currentValues.appId, currentValues.period);
 
             currentValues.availableParams = _.keys(data);
             if (! currentValues.selectedParams.length) {
@@ -375,8 +385,8 @@
             } else {
                 currentValues.selectedParams = _.intersection(currentValues.availableParams, currentValues.selectedParams);
             }
-            theapp.getEventDispatcher().trigger(theapp.ON_AVAILABLE_PARAMS_CHANGE);
-            return theapp.drawChart(data, currentValues.selectedParams);
+            self.getEventDispatcher().trigger(self.ON_AVAILABLE_PARAMS_CHANGE);
+            return self.drawChart(data, currentValues.selectedParams);
         },
 
         /** Transform server data from the server-defined format (see @head)
@@ -399,9 +409,9 @@
             var pointsNum = points.length;
 
             var newData = {};
-            for (var section in theapp.labels) {
+            for (var section in self.labels) {
                 if (section in data) {
-                    var paramNames = theapp.labels[section];
+                    var paramNames = self.labels[section];
                     var dataSection = data[section];  // array (by time point index) of arrays (by param index)
                     if (dataSection.length != pointsNum) {
                         debug("invalid data for section '" + section + "'");
@@ -433,44 +443,44 @@
         /** Update the appId value in currentValues from a HTML value or data attribute
          *
          * @param htmlElement (selector, domElement ...)
-         * @returns object theapp
+         * @returns object self
          */
         updateCurrentAppId: function(htmlElement) {
             htmlElement = $(htmlElement);
             var appId = htmlElement.val() || htmlElement.data("app_id");
-            if (appId != theapp.currentValues.appId) {
-                theapp.currentValues.appId = appId;
-                theapp.loadData();
+            if (appId != self.currentValues.appId) {
+                self.currentValues.appId = appId;
+                self.loadData();
             }
-            return theapp;
+            return self;
         },
 
         /** Update the periodName value in currentValues from a HTML value or data attribute
          *
          * @param htmlElement (selector, domElement ...)
-         * @returns object theapp
+         * @returns object self
          */
         updateCurrentPeriod: function(htmlElement) {
             htmlElement = $(htmlElement);
             var period = htmlElement.val() || htmlElement.data("period");
-            if (theapp.currentValues.period != period) {
-                theapp.currentValues.period = period;
-                theapp.loadData();
+            if (self.currentValues.period != period) {
+                self.currentValues.period = period;
+                self.loadData();
             }
 
-            return theapp;
+            return self;
         },
 
         /** Update the selected params in currentValues
          *
          * @param htmlElement (a select?)
-         * @returns object theapp
+         * @returns object self
          */
         updateSelectedParams: function(htmlElement) {
-            var controlDispatcher = theapp.getControlDispatcher();  // aka <form>
+            var controlDispatcher = self.getControlDispatcher();  // aka <form>
             var $select = $(htmlElement);   // aka <select>
-            var availableParams = theapp.currentValues.availableParams;
-            var selectedParams = theapp.currentValues.selectedParams;
+            var availableParams = self.currentValues.availableParams;
+            var selectedParams = self.currentValues.selectedParams;
 
             // fill the <select> with available params excluding selected
             $select.find("option:first").nextAll().remove();
@@ -490,30 +500,30 @@
                 $target.append($node);
             });
 
-            return theapp;
+            return self;
         },
 
         selectParam: function(label) {
-            var availableParams = theapp.currentValues.availableParams;
-            var selectedParams = theapp.currentValues.selectedParams;
+            var availableParams = self.currentValues.availableParams;
+            var selectedParams = self.currentValues.selectedParams;
             if (_.contains(availableParams, label) && ! _.contains(selectedParams, label)) {
                 selectedParams.push(label);
-                theapp.getEventDispatcher().trigger(theapp.ON_SELECTED_PARAMS_CHANGE);
-                theapp.loadData();
+                self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE);
+                self.loadData();
             }
-            return theapp;
+            return self;
         },
 
         deselectParam: function(label) {
-            var availableParams = theapp.currentValues.availableParams;
-            var selectedParams = theapp.currentValues.selectedParams;
+            var availableParams = self.currentValues.availableParams;
+            var selectedParams = self.currentValues.selectedParams;
             var index = _.indexOf(selectedParams, label);
             if (index != -1) {
                 delete selectedParams[index];
-                theapp.getEventDispatcher().trigger(theapp.ON_SELECTED_PARAMS_CHANGE);
-                theapp.loadData();
+                self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE);
+                self.loadData();
             }
-            return theapp;
+            return self;
         }
     };
 
