@@ -5,6 +5,7 @@
     var SELECTOR = "#developer-column li";
     var ANIM_SPEED = 2000;
     var SHOW_DELAY = 2000;
+    var FADEOUT_SPEED = 2000;
     var FADEOUT_COMPLETE_FLAG = 0;
 
     var queue = {
@@ -128,7 +129,7 @@
             var $elems = $(SELECTOR);
             $elems
                 .delay(SHOW_DELAY)
-                .fadeOut(1000, function() {
+                .fadeOut(FADEOUT_SPEED, function() {
                     var $this = $(this);
 //                    //
 //                    $this.show().css({visibility:"hidden"});
