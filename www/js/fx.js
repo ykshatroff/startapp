@@ -21,7 +21,6 @@
         },
 
         next: function() {
-            console.log("queue.next(): " + queue._queueIndex);
             var queueLength = queue._queue.length;
             if (! queueLength) {
                 return;
@@ -41,7 +40,6 @@
         },
 
         complete: function() {
-            console.log("queue.complete(): " + queue._queueIndex);
             setTimeout(function() {
                 $(document).trigger(queue.EVENT_NEXT);
             }, queue.timeout);
