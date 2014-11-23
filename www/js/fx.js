@@ -58,20 +58,6 @@
         }
     };
 
-    function addToSlideQueue($slider) {
-        return function() {
-            $slider.animate({
-                left: 0
-            }, ANIM_SPEED, function() {
-                queue.complete();
-            });
-        }
-    };
-
-    function startQueue() {
-
-    };
-
     $(document).ready(function() {
         var width;
         $(SELECTOR).each(function() {
