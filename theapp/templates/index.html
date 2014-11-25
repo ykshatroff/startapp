@@ -3,7 +3,9 @@
 <html>
 <head>
     <title>The App</title>
-    <link href="/res/css/styles.css" rel="stylesheet">
+    <link href="/res/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/res/css/roboto.css" rel="stylesheet">
+    <link href="/res/css/style.css" rel="stylesheet">
 
     <script type="text/javascript" src="{% static "js/contrib/underscore-min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.min.js" %}"></script>
@@ -59,7 +61,7 @@
             <section class="col-md-17">
                 <form name="chart">
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-md-4">
                             <label for="chart__app_id">Приложение:</label>
                             <select name="app_id" id="chart__app_id">
                                 <!-- Список приложений:
@@ -69,7 +71,7 @@
                                 <option value="1">App 1</option>
                             </select>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-4">
                             Период:
                             <input type="radio" name="period" value="600" id="chart__period_600">
                             <label for="chart__period_600">10 мин</label>
@@ -82,7 +84,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-md-4">
                             Параметры левой оси:
                             <div class="_selected_params" data-target="left">
                                 <div class="hidden _template">
@@ -95,7 +97,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-4">
                             Параметры правой оси:
                             <div class="_selected_params" data-target="right">
                                 <div class="hidden _template">
