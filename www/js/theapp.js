@@ -167,8 +167,14 @@
         currentValues: {
             appId: "",  // string
             period: null,  // e.g. self.settings.PERIODS['10 min']
-            availableParams: [],  // list of available parameter names
-            selectedParams: []  // list of selected parameter names
+            left: {
+                availableParams: [],  // list of available parameter names
+                selectedParams: []  // list of selected parameter names
+            },
+            right: {
+                availableParams: [],  // list of available parameter names
+                selectedParams: []  // list of selected parameter names
+            }
         },
         cache: {},  // the result cache
         // event name constants
@@ -210,6 +216,14 @@
             return $(self.settings.FORM_SELECTOR);
         },
 
+        getGroupNameFromAttr: function(htmlElement) {
+            try {
+                return $(htmlElement).attr("name").split("_").pop();
+            } catch (ex) {
+                throw "Invalid element name";
+            }
+        },
+
         setupControls: function() {
             var controlDispatcher = self.getControlDispatcher();
             if (! controlDispatcher.length) {
@@ -235,25 +249,29 @@
             });
 
             // assert that param_names is a select
-            var paramsSelector = "[name=param_names]";
+            var paramsSelector = "[name^=param_names_]";
             // append to the select all possible params as hidden options,
             // which will appear when available in chart data
             var $paramsSelector = $(paramsSelector);
             $paramsSelector.on("change", function() {
-                self.selectParam(this.selectedOptions[0].text);
+                var which = self.getGroupNameFromAttr(this);
+                self.selectParam(which, this.selectedOptions[0].text);
                 return false;
             });
 
             controlDispatcher.find(self.settings.SELECTED_PARAMS_SELECTOR).on("click", "a", function() {
-                self.deselectParam($(this.parentNode).find("span").text());
+                var which = self.getGroupNameFromAttr(this);
+                self.deselectParam(which, $(this.parentNode).find("span").text());
             });
 
             self.getEventDispatcher().on(self.ON_AVAILABLE_PARAMS_CHANGE, function() {
-                self.updateSelectedParams($paramsSelector);
+                _.each(['left', 'right'], function(which) {
+                    self.updateSelectedParams($paramsSelector, which);
+                });
             });
 
-            self.getEventDispatcher().on(self.ON_SELECTED_PARAMS_CHANGE, function() {
-                self.updateSelectedParams($paramsSelector);
+            self.getEventDispatcher().on(self.ON_SELECTED_PARAMS_CHANGE, function(evt, which) {
+                self.updateSelectedParams($paramsSelector, which);
             });
 
             return self;
@@ -378,15 +396,22 @@
         displayResult: function() {
             var currentValues = self.currentValues;
             var data = self.getData(currentValues.appId, currentValues.period);
+            var selectedParams = [];
 
-            currentValues.availableParams = _.keys(data);
-            if (! currentValues.selectedParams.length) {
-                currentValues.selectedParams = [ currentValues.availableParams[0] ];  // first key
-            } else {
-                currentValues.selectedParams = _.intersection(currentValues.availableParams, currentValues.selectedParams);
-            }
+            var availableParams = _.keys(data);
+            _.each(['left', 'right'], function(group) {
+                var targetValues = currentValues[group];
+                targetValues.availableParams = availableParams;
+                if (! targetValues.selectedParams.length) {
+                    targetValues.selectedParams = [ availableParams[0] ];  // first key
+                } else {
+                    targetValues.selectedParams = _.intersection(availableParams, targetValues.selectedParams);
+                }
+                selectedParams = _.union(selectedParams, targetValues.selectedParams);
+            });
+
             self.getEventDispatcher().trigger(self.ON_AVAILABLE_PARAMS_CHANGE);
-            return self.drawChart(data, currentValues.selectedParams);
+            return self.drawChart(data, selectedParams);
         },
 
         /** Transform server data from the server-defined format (see @head)
@@ -474,13 +499,17 @@
         /** Update the selected params in currentValues
          *
          * @param htmlElement (a select?)
+         * @param which (a data-target attribute value)
          * @returns object self
          */
-        updateSelectedParams: function(htmlElement) {
+        updateSelectedParams: function(htmlElement, which) {
+            var targetFilter = "[data-target=" + which + "]";
             var controlDispatcher = self.getControlDispatcher();  // aka <form>
-            var $select = $(htmlElement);   // aka <select>
-            var availableParams = self.currentValues.availableParams;
-            var selectedParams = self.currentValues.selectedParams;
+            var $select = $(htmlElement).filter(targetFilter);   // aka <select>
+            var currentValues = self.currentValues[which];
+
+            var availableParams = currentValues.availableParams;
+            var selectedParams = currentValues.selectedParams;
 
             // fill the <select> with available params excluding selected
             $select.find("option:first").nextAll().remove();
@@ -491,7 +520,10 @@
             });
 
             // build the list of selected params using a HTML template
-            var $target = controlDispatcher.find("#chart__selectedParams");
+            var $target = controlDispatcher
+                .find(self.settings.SELECTED_PARAMS_SELECTOR)
+                .filter(targetFilter)
+                ;
             var $template = $target.find("._template");
             $template.nextAll().remove();
             _.each(selectedParams, function(label) {
@@ -503,24 +535,26 @@
             return self;
         },
 
-        selectParam: function(label) {
-            var availableParams = self.currentValues.availableParams;
-            var selectedParams = self.currentValues.selectedParams;
+        selectParam: function(which, label) {
+            var currentValues = self.currentValues[which];
+            var availableParams = currentValues.availableParams;
+            var selectedParams = currentValues.selectedParams;
             if (_.contains(availableParams, label) && ! _.contains(selectedParams, label)) {
                 selectedParams.push(label);
-                self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE);
+                self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE, [which]);
                 self.loadData();
             }
             return self;
         },
 
-        deselectParam: function(label) {
-            var availableParams = self.currentValues.availableParams;
-            var selectedParams = self.currentValues.selectedParams;
+        deselectParam: function(which, label) {
+            var currentValues = self.currentValues[which];
+            var availableParams = currentValues.availableParams;
+            var selectedParams = currentValues.selectedParams;
             var index = _.indexOf(selectedParams, label);
             if (index != -1) {
                 delete selectedParams[index];
-                self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE);
+                self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE, [which]);
                 self.loadData();
             }
             return self;
