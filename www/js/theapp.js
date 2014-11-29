@@ -22,6 +22,7 @@
 
     var self = window.TheApp = {
         settings: {
+            APP_ID_SELECTOR: "[name=app_id]",  // a <select> of app IDs; relative to FORM_SELECTOR
             CANVAS_SELECTOR: "#chart",  // the jQuery selector of the canvas div
             CANVAS_SIZE: {  // the width and height of the canvas div
                 width: "500px",
@@ -31,6 +32,10 @@
             DEFAULT_SECTION: "appInfo",
             FORM_SELECTOR: "form[name=chart]",  // the jQuery selector of the control form div
             HEADER_DIV_SELECTOR: "#chartHeader",  // the jQuery selector of the header div
+            MODAL_SELECTOR: "#chartSelectionModal",  // the jQuery selector of the param choice modal dialog
+
+            PARAMS_CHOICE_SELECTOR: "select[name=param_names]", // a <select> with available parameters' names
+            PERIOD_CHOICE_SELECTOR: "",  // a <radio> of periods; relative to FORM_SELECTOR
             PERIODS: {
                 '10 min': 600,
                 '1 hour': 3600,
@@ -231,37 +236,41 @@
             }
 
             // assert that period is an input type=radio
-            var periodInputSelector = "[name=period]";
+            var periodInputSelector = self.settings.PERIOD_CHOICE_SELECTOR;
             var periodInputSelectorChecked = periodInputSelector + ":checked";
-            if ( !$(periodInputSelectorChecked).length ) {
-                $(periodInputSelector)[0].checked = true;
+            if ( !$(periodInputSelectorChecked, controlDispatcher).length ) {
+                $(periodInputSelector, controlDispatcher)[0].checked = true;
             }
-            self.currentValues.period = $(periodInputSelectorChecked).val();
-            $(periodInputSelector).on("change", function() {
+            self.currentValues.period = $(periodInputSelectorChecked, controlDispatcher).val();  //re-evaluate checked
+            $(periodInputSelector, controlDispatcher).on("change", function() {
                 self.updateCurrentPeriod(this);
             });
 
             // assert that app_id is a select
-            var appIdSelector = "[name=app_id]";
-            self.currentValues.appId = $(appIdSelector).val();
-            $(appIdSelector).on("change", function() {
+            var $appIdSelector = $(self.settings.APP_ID_SELECTOR, controlDispatcher);
+            self.currentValues.appId = $appIdSelector.val();
+            $appIdSelector.on("change", function() {
                 self.updateCurrentAppId(this);
             });
 
-            // assert that param_names is a select
-            var paramsSelector = "[name^=param_names_]";
             // append to the select all possible params as hidden options,
             // which will appear when available in chart data
-            var $paramsSelector = $(paramsSelector);
-            $paramsSelector.on("change", function() {
-                var which = self.getGroupNameFromAttr(this);
-                self.selectParam(which, this.selectedOptions[0].text);
-                return false;
-            });
+            var $paramsSelector = $(self.settings.PARAMS_CHOICE_SELECTOR);
+//            $paramsSelector.on("change", function() {
+//                var which = self.getGroupNameFromAttr(this);
+//                self.selectParam(which, this.selectedOptions[0].text);
+//                return false;
+//            });
 
             controlDispatcher.find(self.settings.SELECTED_PARAMS_SELECTOR).on("click", "a", function() {
                 var which = self.getGroupNameFromAttr(this);
                 self.deselectParam(which, $(this.parentNode).find("span").text());
+            });
+
+            controlDispatcher.find("button[data-target]").on("click", function() {
+                var which = $(this).data("target");
+                self.openParamChoiceDialog(which);
+                return false;
             });
 
             self.getEventDispatcher().on(self.ON_AVAILABLE_PARAMS_CHANGE, function() {
@@ -399,11 +408,12 @@
             var selectedParams = [];
 
             var availableParams = _.keys(data);
+            var i = 0;
             _.each(['left', 'right'], function(group) {
                 var targetValues = currentValues[group];
                 targetValues.availableParams = availableParams;
                 if (! targetValues.selectedParams.length) {
-                    targetValues.selectedParams = [ availableParams[0] ];  // first key
+                    targetValues.selectedParams = [ availableParams[i ++] ];  // first key
                 } else {
                     targetValues.selectedParams = _.intersection(availableParams, targetValues.selectedParams);
                 }
@@ -505,14 +515,14 @@
         updateSelectedParams: function(htmlElement, which) {
             var targetFilter = "[data-target=" + which + "]";
             var controlDispatcher = self.getControlDispatcher();  // aka <form>
-            var $select = $(htmlElement).filter(targetFilter);   // aka <select>
+            var $select = $(htmlElement); //.filter(targetFilter);   // aka <select>
             var currentValues = self.currentValues[which];
 
             var availableParams = currentValues.availableParams;
             var selectedParams = currentValues.selectedParams;
 
             // fill the <select> with available params excluding selected
-            $select.find("option:first").nextAll().remove();
+            $select.find("option").remove();
             _.each(availableParams, function(label) {
                 if (! _.contains(selectedParams, label)) {
                     $select.append($("<option>").text(label));
@@ -557,6 +567,11 @@
                 self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE, [which]);
                 self.loadData();
             }
+            return self;
+        },
+
+        openParamChoiceDialog: function(which) {
+            $(self.settings.MODAL_SELECTOR).modal('show');
             return self;
         }
     };

@@ -11,6 +11,7 @@
     <script type="text/javascript" src="{% static "js/contrib/jquery.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/contrib/jquery.flot.time.min.js" %}"></script>
+    <script type="text/javascript" src="{% static "js/bootstrap.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/theapp.js" %}"></script>
     <script type="text/javascript">
         $(function() {
@@ -60,6 +61,27 @@
             <!-- COPY start -->
             <section class="col-md-17">
                 <form name="chart">
+
+<!-- Modal -->
+<div class="modal fade" id="chartSelectionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Закрыть</span></button>
+        <h4 class="modal-title" id="chartSelectionModal__label">Добавить параметр</h4>
+      </div>
+      <div class="modal-body">
+            <select name="param_names"></select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+        <button type="button" class="btn btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END Modal -->
+
                     <div class="row">
                         <div class="col-md-4">
                             <label for="chart__app_id">Приложение:</label>
@@ -88,27 +110,19 @@
                             Параметры левой оси:
                             <div class="_selected_params" data-target="left">
                                 <div class="hidden _template">
-                                    <span>Тестовый параметр</span> <a href="#">X</a>
+                                    <span>Тестовый параметр</span> <a href="#">&times;</a>
                                 </div>
                             </div>
-                            <div class="param_names">
-                                <select name="param_names_left" data-target="left">
-                                    <option>+++ Добавить параметр +++</option>
-                                </select>
-                            </div>
+                            <button data-target="left" type="button">Добавить</button>
                         </div>
                         <div class="col-md-4">
                             Параметры правой оси:
                             <div class="_selected_params" data-target="right">
                                 <div class="hidden _template">
-                                    <span>Тестовый параметр</span> <a href="#">X</a>
+                                    <span>Тестовый параметр</span> <a href="#">&times;</a>
                                 </div>
                             </div>
-                            <div class="param_names">
-                                <select name="param_names_right" data-target="right">
-                                    <option>+++ Добавить параметр +++</option>
-                                </select>
-                            </div>
+                            <button data-target="right" type="button">Добавить</button>
                         </div>
                     </div>
                 </form>
