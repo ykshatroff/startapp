@@ -205,6 +205,8 @@
             // TODO: set canvas dimensions if not set in CSS
             var canvas = self.getCanvas();
 
+            self.updateParamNames();
+
             // setup control elements
             self.setupControls();
 
@@ -214,6 +216,19 @@
 
             self.loadData();
 
+            return self;
+        },
+
+        /** Modify parameter names to contain their group name
+         *
+         */
+        updateParamNames: function() {
+            _.each(self.labels, function(labels, group) {
+                _.each(labels, function(label, index){
+                    label = "[" + group + "] " + label;
+                    labels[index] = label;
+                });
+            });
             return self;
         },
 
@@ -258,15 +273,6 @@
                     self.updateCurrentAppId(this);
                 });
             }
-
-            // append to the select all possible params as hidden options,
-            // which will appear when available in chart data
-            var $paramsSelector = $(self.settings.PARAMS_CHOICE_SELECTOR);
-//            $paramsSelector.on("change", function() {
-//                var which = self.getGroupNameFromAttr(this);
-//                self.selectParam(which, this.selectedOptions[0].text);
-//                return false;
-//            });
 
             controlDispatcher.find(self.settings.SELECTED_PARAMS_SELECTOR).on("click", "a", function() {
                 var which = self.getGroupNameFromAttr(this);
@@ -545,9 +551,11 @@
 
             var currentValues = self.currentValues[which];
             var selectedParams = currentValues.selectedParams;
+            var regex = /^(\[\w+\])/;
             _.each(selectedParams, function(label) {
                 var $node = $template.clone().removeClass("hidden _template");
-                $node.find("span").text(label);
+                label = label.replace(regex, "<i>$1</i>");
+                $node.find("span").html(label);
                 $node.find("a").data("target", which);
                 $target.append($node);
             });
