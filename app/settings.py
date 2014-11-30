@@ -200,7 +200,7 @@ except IOError:
     except IOError:
         pass
 
-if DEBUG:
+if DEBUG and False:
     INSTALLED_APPS += (
         'debug_toolbar',
     )
