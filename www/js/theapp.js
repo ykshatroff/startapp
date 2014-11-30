@@ -580,7 +580,8 @@
             var selectedParams = currentValues.selectedParams;
             var index = _.indexOf(selectedParams, label);
             if (index != -1) {
-                delete selectedParams[index];
+                delete selectedParams[index];  // super ugly Javascript
+                currentValues.selectedParams = _.compact(selectedParams);
                 self.getEventDispatcher().trigger(self.ON_SELECTED_PARAMS_CHANGE, [which]);
                 self.loadData();
             }
