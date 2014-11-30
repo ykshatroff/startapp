@@ -165,6 +165,9 @@
                 "Кол-во запросов на смену ника",
             ],
         },
+        messages: {
+            NO_PARAMETERS_AVAILABLE: "( No parameters available )"
+        },
 
         // private data
         canvas: null,
@@ -586,7 +589,7 @@
                 }
             });
             if ($("option", $select).length == 0) {
-                $select.append($("<option>").text("( Нет доступных параметров для выбора )"));
+                $select.append($("<option>").text(self.messages.NO_PARAMETERS_AVAILABLE));
             }
             return self;
         },
