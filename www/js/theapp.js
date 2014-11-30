@@ -585,6 +585,9 @@
                     $select.append($("<option>").text(label));
                 }
             });
+            if ($("option", $select).length == 0) {
+                $select.append($("<option>").text("( Нет доступных параметров для выбора )"));
+            }
             return self;
         },
 
