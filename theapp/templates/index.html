@@ -12,24 +12,24 @@
 		<link rel="stylesheet" href="/res/css/style.css">
 		<link rel="stylesheet" href="/res/js/slick/slick.css">
 
-		<script src="/res/js/jquery.js"></script>
+		<script src="/res/js/contrib/jquery.min.js"></script>
 		<script src="/res/js/bootstrap.min.js"></script>
 
-		<link rel="stylesheet" href="/res/js/sweetalert/sweet-alert.css">
-		<script src="/res/js/sweetalert/sweet-alert.min.js"></script>
-		<script>
-		jQuery(document).ready(function() {
-			var menu = jQuery("#navbar-main");
-
-			jQuery(window).scroll(function(event) {
-				if (jQuery(this).scrollTop() > 60 && menu.hasClass('default')) {
-					menu.removeClass('default').addClass('fixed');
-				} else if (jQuery(this).scrollTop() <= 60 && menu.hasClass('fixed')) {
-					menu.removeClass('fixed').addClass('default');
-				}
-			});
-		});
-		</script>
+{#		<link rel="stylesheet" href="/res/js/sweetalert/sweet-alert.css">#}
+{#		<script src="/res/js/sweetalert/sweet-alert.min.js"></script>#}
+{#		<script>#}
+{#		jQuery(document).ready(function() {#}
+{#			var menu = jQuery("#navbar-main");#}
+{##}
+{#			jQuery(window).scroll(function(event) {#}
+{#				if (jQuery(this).scrollTop() > 60 && menu.hasClass('default')) {#}
+{#					menu.removeClass('default').addClass('fixed');#}
+{#				} else if (jQuery(this).scrollTop() <= 60 && menu.hasClass('fixed')) {#}
+{#					menu.removeClass('fixed').addClass('default');#}
+{#				}#}
+{#			});#}
+{#		});#}
+{#		</script>#}
 	</head>
 <body>
 	<div class="row">
@@ -111,7 +111,17 @@
 
 
             <!-- COPY start -->
-            <section class="col-md-3">
+            <script type="text/javascript" src="/res/js/contrib/underscore-min.js"></script>
+            <script type="text/javascript" src="/res/js/contrib/jquery.flot.min.js"></script>
+            <script type="text/javascript" src="/res/js/contrib/jquery.flot.time.min.js"></script>
+            <script type="text/javascript" src="/res/js/theapp.js"></script>
+            <script type="text/javascript">
+                $(function() {
+                    TheApp.init();
+                })
+            </script>
+
+            <section>
                 <form name="chart">
 
 <!-- Modal -->
