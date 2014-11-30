@@ -252,10 +252,12 @@
 
             // assert that app_id is a select
             var $appIdSelector = $(self.settings.APP_ID_SELECTOR, controlDispatcher);
-            self.currentValues.appId = $appIdSelector.val();
-            $appIdSelector.on("change", function() {
-                self.updateCurrentAppId(this);
-            });
+            if ($("option", $appIdSelector).length > 0) {
+                self.currentValues.appId = $appIdSelector.val();
+                $appIdSelector.on("change", function() {
+                    self.updateCurrentAppId(this);
+                });
+            }
 
             // append to the select all possible params as hidden options,
             // which will appear when available in chart data
@@ -316,6 +318,9 @@
         loadData: function() {
             var currentValues = self.currentValues;
             var appId = currentValues.appId;
+            if (appId == "") {
+                return self;
+            }
             var period = currentValues.period || _.values(self.settings.PERIODS)[0];  // first value
 
             // check data in cache
