@@ -35,7 +35,7 @@
             MODAL_SELECTOR: "#chartSelectionModal",  // the jQuery selector of the param choice modal dialog
 
             PARAMS_CHOICE_SELECTOR: "select[name=param_names]", // a <select> with available parameters' names
-            PERIOD_CHOICE_SELECTOR: "",  // a <radio> of periods; relative to FORM_SELECTOR
+            PERIOD_CHOICE_SELECTOR: "input[name=period]",  // a <radio> of periods; relative to FORM_SELECTOR
             PERIODS: {
                 '10 min': 600,
                 '1 hour': 3600,
@@ -179,7 +179,8 @@
             right: {
                 availableParams: [],  // list of available parameter names
                 selectedParams: []  // list of selected parameter names
-            }
+            },
+            availableParams: []
         },
         cache: {},  // the result cache
         // event name constants
@@ -223,7 +224,7 @@
 
         getGroupNameFromAttr: function(htmlElement) {
             try {
-                return $(htmlElement).attr("name").split("_").pop();
+                return $(htmlElement).data("target");
             } catch (ex) {
                 throw "Invalid element name";
             }
@@ -275,12 +276,18 @@
 
             self.getEventDispatcher().on(self.ON_AVAILABLE_PARAMS_CHANGE, function() {
                 _.each(['left', 'right'], function(which) {
-                    self.updateSelectedParams($paramsSelector, which);
+                    self.updateSelectedParams(which);
                 });
             });
 
             self.getEventDispatcher().on(self.ON_SELECTED_PARAMS_CHANGE, function(evt, which) {
-                self.updateSelectedParams($paramsSelector, which);
+                self.updateSelectedParams(which);
+            });
+
+            // handle click on the modal's OK button: close modal and update selected params
+            $(self.settings.MODAL_SELECTOR).find("button.btn-primary").on("click", function() {
+                self.completeParamChoice();
+                return true;
             });
 
             return self;
@@ -350,6 +357,11 @@
             return self;
         },
 
+        getAllSelectedParams: function() {
+            var currentValues = self.currentValues;
+            return _.union(currentValues['left'].selectedParams, currentValues['right'].selectedParams);
+        },
+
         /**
          *
          * @param data object : {paramName1: [ [x1,y1], [x2, y2], ... ], paramNameN: ... }
@@ -405,7 +417,6 @@
         displayResult: function() {
             var currentValues = self.currentValues;
             var data = self.getData(currentValues.appId, currentValues.period);
-            var selectedParams = [];
 
             var availableParams = _.keys(data);
             var i = 0;
@@ -413,15 +424,15 @@
                 var targetValues = currentValues[group];
                 targetValues.availableParams = availableParams;
                 if (! targetValues.selectedParams.length) {
-                    targetValues.selectedParams = [ availableParams[i ++] ];  // first key
+                    targetValues.selectedParams = [ availableParams[i++] ];  // first key
                 } else {
                     targetValues.selectedParams = _.intersection(availableParams, targetValues.selectedParams);
                 }
-                selectedParams = _.union(selectedParams, targetValues.selectedParams);
             });
+            currentValues.availableParams = availableParams;
 
             self.getEventDispatcher().trigger(self.ON_AVAILABLE_PARAMS_CHANGE);
-            return self.drawChart(data, selectedParams);
+            return self.drawChart(data, self.getAllSelectedParams());
         },
 
         /** Transform server data from the server-defined format (see @head)
@@ -506,39 +517,30 @@
             return self;
         },
 
-        /** Update the selected params in currentValues
+        /** Update the selected params list in a column (HTML)
          *
-         * @param htmlElement (a select?)
-         * @param which (a data-target attribute value)
+         * @param which : string - the column id (a data-target attribute value)
          * @returns object self
          */
-        updateSelectedParams: function(htmlElement, which) {
+        updateSelectedParams: function(which) {
             var targetFilter = "[data-target=" + which + "]";
             var controlDispatcher = self.getControlDispatcher();  // aka <form>
-            var $select = $(htmlElement); //.filter(targetFilter);   // aka <select>
-            var currentValues = self.currentValues[which];
-
-            var availableParams = currentValues.availableParams;
-            var selectedParams = currentValues.selectedParams;
-
-            // fill the <select> with available params excluding selected
-            $select.find("option").remove();
-            _.each(availableParams, function(label) {
-                if (! _.contains(selectedParams, label)) {
-                    $select.append($("<option>").text(label));
-                }
-            });
 
             // build the list of selected params using a HTML template
+            // $target is the "column" div
             var $target = controlDispatcher
                 .find(self.settings.SELECTED_PARAMS_SELECTOR)
                 .filter(targetFilter)
                 ;
             var $template = $target.find("._template");
             $template.nextAll().remove();
+
+            var currentValues = self.currentValues[which];
+            var selectedParams = currentValues.selectedParams;
             _.each(selectedParams, function(label) {
                 var $node = $template.clone().removeClass("hidden _template");
                 $node.find("span").text(label);
+                $node.find("a").data("target", which);
                 $target.append($node);
             });
 
@@ -546,8 +548,8 @@
         },
 
         selectParam: function(which, label) {
+            var availableParams = self.currentValues.availableParams;
             var currentValues = self.currentValues[which];
-            var availableParams = currentValues.availableParams;
             var selectedParams = currentValues.selectedParams;
             if (_.contains(availableParams, label) && ! _.contains(selectedParams, label)) {
                 selectedParams.push(label);
@@ -559,7 +561,6 @@
 
         deselectParam: function(which, label) {
             var currentValues = self.currentValues[which];
-            var availableParams = currentValues.availableParams;
             var selectedParams = currentValues.selectedParams;
             var index = _.indexOf(selectedParams, label);
             if (index != -1) {
@@ -570,8 +571,43 @@
             return self;
         },
 
+        /**
+         *
+         * @param htmlElement
+         */
+        buildParamChoices: function(htmlElement) {
+            var $select = $(htmlElement);
+            var availableParams = self.currentValues.availableParams;
+            var selectedParams = self.getAllSelectedParams();
+            $select.empty();
+            _.each(availableParams, function(label) {
+                if (! _.contains(selectedParams, label)) {
+                    $select.append($("<option>").text(label));
+                }
+            });
+            return self;
+        },
+
         openParamChoiceDialog: function(which) {
+            var $select = $(self.settings.PARAMS_CHOICE_SELECTOR).data({target: which});
+            self.buildParamChoices($select);
             $(self.settings.MODAL_SELECTOR).modal('show');
+            return self;
+        },
+
+        /** Handle param-choice dialog button "OK" pressed:
+         *      - hide dialog
+         *      - change selected params
+         *      - update chart
+         *      - update the HTML list
+         *
+         * @returns Object self
+         */
+        completeParamChoice: function() {
+            $(self.settings.MODAL_SELECTOR).modal("hide");
+            var $select = $(self.settings.PARAMS_CHOICE_SELECTOR);
+            var which = $select.data("target");
+            self.selectParam(which, $select.val());
             return self;
         }
     };
