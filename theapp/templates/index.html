@@ -1,65 +1,117 @@
-{% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>The App</title>
-    <link href="/res/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/res/css/roboto.css" rel="stylesheet">
-    <link href="/res/css/style.css" rel="stylesheet">
 
-    <script type="text/javascript" src="{% static "js/contrib/underscore-min.js" %}"></script>
-    <script type="text/javascript" src="{% static "js/contrib/jquery.min.js" %}"></script>
-    <script type="text/javascript" src="{% static "js/contrib/jquery.flot.min.js" %}"></script>
-    <script type="text/javascript" src="{% static "js/contrib/jquery.flot.time.min.js" %}"></script>
-    <script type="text/javascript" src="{% static "js/bootstrap.min.js" %}"></script>
-    <script type="text/javascript" src="{% static "js/theapp.js" %}"></script>
-    <script type="text/javascript">
-        $(function() {
-            TheApp.init();
-        })
-    </script>
-</head>
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="">
+		<meta name="keywords" content="">
+		<title>Statictics of your applications...</title>
+
+		<link rel="stylesheet" href="/res/css/bootstrap.min.css">
+		<link rel="stylesheet" href="/res/css/style.css">
+		<link rel="stylesheet" href="/res/js/slick/slick.css">
+
+		<script src="/res/js/jquery.js"></script>
+		<script src="/res/js/bootstrap.min.js"></script>
+
+		<link rel="stylesheet" href="/res/js/sweetalert/sweet-alert.css">
+		<script src="/res/js/sweetalert/sweet-alert.min.js"></script>
+		<script>
+		jQuery(document).ready(function() {
+			var menu = jQuery("#navbar-main");
+
+			jQuery(window).scroll(function(event) {
+				if (jQuery(this).scrollTop() > 60 && menu.hasClass('default')) {
+					menu.removeClass('default').addClass('fixed');
+				} else if (jQuery(this).scrollTop() <= 60 && menu.hasClass('fixed')) {
+					menu.removeClass('fixed').addClass('default');
+				}
+			});
+		});
+		</script>
+	</head>
 <body>
-    <div class="wrapper container">
-        <header>
-            Hi <b>y_shatrov!</b> (<a href="/logout/">logout</a>)
-            <form name="search" action="#" method="get" class="form-inline form-search pull-right">
-                <div class="input-group">
-                    <label class="sr-only" for="searchInput">Search</label>
-                    <input class="form-control" id="searchInput" type="text" name="search" placeholder="Search">
-                    <div class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">GO</button>
-                    </div>
-                </div>
-            </form>
-        </header>
-        <nav class="navbar navbar-default">
-            <ul class="nav navbar-nav">
-                <li><a href="/" >Home</a></li>
-                <li><a href="/custom/" >Customers</a></li>
-                <li class="active"><a href="/desc/" >For Developers</a></li>
-                <li><a href="/feedback/" >Feedback</a></li>
-                <li><a href="/forum/" >Forum</a></li>
-            </ul>
-        </nav>
-        <nav class="navbar navbar-default">
-            <ul class="nav navbar-nav">
-                <li><a href="/desc/" >Description</a></li>
-                <li class="active"><a href="/devapps/" >Applications</a></li>
-                <li><a href="/devacc/" >Account</a></li>
-            </ul>
-        </nav>
-        <div class="row">
-            <aside class="col-md-7">
-                <ul class="list-group submenu">
-                    <li class="list-group-item active"><a href="">General info</a></li>
-                    <li class="list-group-item active"><a href="">WoA</a></li>
-                </ul>
-            </aside>
+	<div class="row">
+		<div class="container" id="header">
+			<div class="col-sm-3">
+				<div class="row">
+					<div class="col-sm-12">
+						<a href="index.php" class="home-link pull-left">
+							<img src="/res/images/logo.png" id="logo" alt="" />
+						</a>
+						<div class="navbar-header">
+							<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-main">
+								<span class="sr-only">Menu</span>
+								<span class="icon-bar"></span>
+								<span class="icon-bar"></span>
+								<span class="icon-bar"></span>
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-9">
+				<div class="row">
+					<div class="col-sm-12">
+						<div class="row">
+							<div class="col-sm-12">
+								<p class="pull-right">
+									Hello, <strong>y_shatrov</strong>!
+									(<a href="logout.htm">logout</a>|<a href="closeall.htm">close all session</a>)
+								</p>
+							</div>
+						</div>
+					</div>
+					<div class="col-sm-12">
+						<div class="row">
+							<div class="col-sm-8">
+								<div class="collapse navbar-collapse default" id="navbar-main">
+									<ul class="nav navbar-nav">
+										<li><a href="/">Home</a></li>
+										<li><a href="" class="dropdown-toggle" data-toggle="dropdown">Account <span class="caret"></span></a>
+											<ul class="dropdown-menu">
+												<li><a href="/account.htm">Account</a></li>
+												<li><a href="/appinfo.htm">Applications</a></li>
+											</ul>
+										</li>
+										<li><a href="" class="dropdown-toggle" data-toggle="dropdown">Developers <span class="caret"></span></a>
+											<ul class="dropdown-menu">
+												<li><a href="/desc.htm">Description</a></li>
+												<li><a href="/appstat.htm">Statistics</a></li>
+											</ul>
+										</li>
+										<li><a href="" class="dropdown-toggle" data-toggle="dropdown">Feedback <span class="caret"></span></a>
+											<ul class="dropdown-menu">
+												<li><a href="/feedback.htm">Feedback</a></li>
+												<li><a href="/contacts.htm">Contacts</a></li>
+												<li><a href="/vacancy.htm">Vacancy</a></li>
+											</ul>
+										</li>
+										<!--<li><a href="">Forum</a></li> -->
+									</ul>
+								</div>
+							</div>
+						<!--	<div class="col-sm-4">
+								<div class="form">
+									<form action="phprusearch/" class="form-search">
+										<input type="search" class="form-control" placeholder="Search...">
+									</form>
+								</div>
+							</div> -->
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row content" id="main-part">
+			<div class="container">
+	<h2>Statistics of applications</h2>
 
 
             <!-- COPY start -->
-            <section class="col-md-17">
+            <section class="col-md-3">
                 <form name="chart">
 
 <!-- Modal -->
